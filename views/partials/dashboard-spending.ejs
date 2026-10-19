@@ -1,0 +1,6 @@
+<article class="panel spending-panel" aria-label="Recorded spending over time">
+ <div class="panel-topline"><h2>Spending over time</h2><details class="spending-values"><summary aria-label="Inspect daily spending values">Daily values</summary><select id="spending-inspect" aria-label="Daily recorded spending values"></select></details></div><div class="spending-context"><p id="spending-range" class="module-context"></p><output id="spending-detail" class="module-context" aria-live="polite"></output></div>
+ <div id="spending-chart" hidden><div class="spending-chart-layout"><div id="spending-y-axis" class="spending-y-axis" aria-hidden="true"></div><div><div id="spending-bars" class="spending-bars" role="group" aria-label="Daily recorded spending; use left and right arrows"></div><div id="spending-x-axis" class="spending-x-axis" aria-hidden="true"></div></div></div>
+ <table class="accessible-table"><caption>Daily recorded expenses. Zero means no entries recorded, not proof of no spending.</caption><thead><tr><th scope="col">Date</th><th scope="col">Recorded spending (Tk)</th><th scope="col">Entries</th></tr></thead><tbody id="spending-table"></tbody></table></div>
+ <p id="spending-status" class="inline-status" role="status">Loading spending…</p><button id="retry-spending" class="module-retry" type="button" hidden>Retry spending</button>
+</article>

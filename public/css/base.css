@@ -1,56 +1,53 @@
-/* ================= BASE STYLES ================= */
-/* Common CSS styles used across all authenticated pages (dashboard, habits, expenses, etc.) */
-
-/* Reset default margins and set consistent font */
-* {
-  margin: 0;
-  font-family: "Bricolage Grotesque", sans-serif;
+:root {
+ --canvas:#dedbd4;--surface:#f7f6f0;--ink:#222320;--muted:#66675f;--line:#d2d1c7;
+ --blue:#c5d4e7;--lilac:#e0cfe0;--accent:#262823;--danger:#913c2e;
+ --space-1:.5rem;--space-2:1rem;--space-3:1.5rem;--space-4:2rem;
+ --radius-sm:12px;--radius:24px;--border:1px solid var(--line);
 }
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;display:flex;flex-direction:column;min-height:100vh;background:var(--canvas);color:var(--ink);font-family:var(--font-sans);line-height:1.5}
+button,input,select,textarea{font:inherit}
+a{color:inherit}
+:focus-visible{outline:3px solid #315a89;outline-offset:4px}
+button:disabled,input:disabled{cursor:wait;opacity:.6}
+[hidden]{display:none!important}
+/* Dock clearance applies to every page using the authenticated stylesheet. */
+body { --dock-clearance:calc(84px + env(safe-area-inset-bottom,0px));padding-bottom:var(--dock-clearance); }
+.nav-dock { --dock-surface:#f7f6f0;--dock-ink:#222320;--dock-line:#d2d1c7;position:fixed;z-index:50;bottom:calc(12px + env(safe-area-inset-bottom,0px));left:50%;translate:-50% 0;display:flex;align-items:center;gap:6px;width:max-content;max-width:calc(100% - 16px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px));padding:6px 8px;border:1px solid var(--dock-line);border-radius:999px;background:var(--dock-surface);color:var(--dock-ink);box-shadow:0 6px 26px #2223201c; }
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) { .nav-dock { background:rgba(247,246,240,.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px); } }
+[data-theme=dark] .nav-dock { --dock-surface:#292b27;--dock-ink:#f7f6f0;--dock-line:#51534b; }
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) { [data-theme=dark] .nav-dock { background:rgba(41,43,39,.94); } }
+.dock-links { display:flex;align-items:center;gap:4px;list-style:none;padding:0;margin:0; }
+.dock-link { position:relative;display:grid;place-items:center;width:48px;height:48px;border-radius:999px;text-decoration:none;color:inherit;transition:background-color 180ms ease,color 180ms ease; }
+.dock-link:hover { background:var(--dock-line);color:var(--dock-ink); }
+.dock-link[aria-current=page] { background:var(--dock-ink);color:var(--dock-surface); }
+.dock-link:focus-visible { outline:3px solid var(--dock-ink);outline-offset:3px; }
+.brand-symbol { display:grid;place-items:center;width:36px;height:36px;background:var(--dock-ink);color:var(--dock-surface);border-radius:50%;font:400 1.2rem var(--font-text);letter-spacing:-.05em; }
+.dock-separator { height:26px;width:1px;background:var(--dock-line);margin:0 3px;flex-shrink:0; }
+.dock-tooltip { position:absolute;bottom:calc(100% + 10px);left:50%;translate:-50% 0;white-space:nowrap;border:1px solid var(--dock-ink);border-radius:8px;padding:.3rem .55rem;background:var(--dock-ink);color:var(--dock-surface);font-size:.8rem;line-height:1.5;visibility:hidden;opacity:0;pointer-events:none;transition:opacity 140ms ease; }
+.nav-dock:not([data-tooltips-dismissed]) .dock-link:is(:hover,:focus-visible) .dock-tooltip { visibility:visible;opacity:1; }
+@media(max-width:380px) { .nav-dock { gap:2px;padding:5px; }.dock-links { gap:0; }.dock-link { width:44px;height:44px; }.dock-separator { margin:0 2px; } }
+@media(prefers-reduced-motion:reduce) { .dock-link,.dock-tooltip { transition:none; } }
+.profile-page { width:min(600px,calc(100% - 2rem));margin:2rem auto;padding:1.5rem; }
+.profile-page h1 { font:400 2rem var(--font-display);margin:0 0 1.25rem; }
+.profile-name { font-size:1.3rem;overflow-wrap:anywhere; }
+.profile-logout { display:inline-flex;align-items:center;min-height:44px;margin-top:1rem;padding:.6rem 1.1rem;border-radius:999px;background:var(--ink);color:var(--surface);text-decoration:none; }
+.app-card{background:var(--surface);color:var(--ink);border:var(--border);border-radius:var(--radius-sm);box-shadow:0 3px 12px #22232005}
+body .btn-outline-light{color:var(--ink);border-color:var(--muted)}
+footer{margin-top:auto;background:transparent;color:var(--muted);font-size:.75rem;padding:1rem}
+input[type=checkbox]{accent-color:var(--ink)}
+.preview-banner{margin:1rem auto 0;padding:.75rem 1rem;width:min(1100px,calc(100% - 2rem));border:var(--border);border-radius:var(--radius-sm);font-size:.8rem;color:var(--muted)}
 
-/* Main page layout - full height with flexbox for sticky footer */
-body {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  /* Dark background for the app */
-  background-color: #1b262c;
-  color: white;
-}
+/* Semantic emphasis uses supplied Medium and Bold faces. Roman remains the default. */
+h1,h2,h3,h4,h5,h6 { font-weight:500; }
+b,strong { font-weight:700; }
 
-/* Navigation bar positioning */
-.navbar-container {
-  padding: 0;
-}
 
-.navbar-brand {
-  padding-left: 1rem;
-}
-
-/* Card styling for all the card elements of bootstrap */
-.app-card {
-  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent dark background */
-  backdrop-filter: blur(20px); /* Glass effect */
-  color: white;
-  box-shadow: 5px 5px 20px rgba(0, 0, 0, 0.5); /* Drop shadow */
-}
-
-/* Checkbox styling - making the checkbox larger and more clickable */
-input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-}
-
-/* Hover effect for cards - subtle lift in the y direction */
-.card:hover {
-  transform: translateY(-2px);
-  transition: 0.2s ease;
-}
-
-/* Footer styling */
-footer {
-  background-color: #bbe1fa;
-  color: #1b262c;
-  margin-top: auto; /* Pushes footer to bottom */
+.dock-brand .dock-tooltip { left:0;translate:0 0; }
+.dock-links li:last-child .dock-tooltip { left:auto;right:0;translate:0 0; }
+/* Let existing list controls wrap instead of widening the mobile viewport. */
+@media(max-width:600px) {
+ #habit-list .card,#goals-list .card { flex-wrap:wrap; }
+ #habit-list .card>div:first-child,#goals-list .flex-grow-1 { flex-basis:100%;min-width:0; }
+ #habit-list .card span { white-space:normal;overflow-wrap:anywhere; }
 }

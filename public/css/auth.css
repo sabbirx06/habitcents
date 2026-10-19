@@ -5,9 +5,7 @@
   min-height: 100vh;
 }
 
-* {
-  font-family: "Bricolage Grotesque", sans-serif;
-}
+body { font-family: var(--font-sans); }
 
 body {
   margin: 0;

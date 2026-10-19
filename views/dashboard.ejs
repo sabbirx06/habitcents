@@ -1,69 +1,86 @@
-<%- include("partials/head", { title: "Dashboard", css: ["/css/base.css"] }) %>
+<%- include("partials/head", { title: "Dashboard · HabitCents", css: ["/css/base.css", "/css/dashboard.css", "/css/dashboard-dates.css", "/css/dashboard-modules.css"] }) %>
+<body class="app-body">
+ <%- include("partials/navbar") %>
+ <main class="dashboard-shell">
+  <% if (typeof demo !== 'undefined' && demo) { %><p class="demo-notice">Demo preview <span>Sample data · changes stay in memory</span></p><% } %>
+  <header class="dashboard-heading time-header">
+   <div class="header-identity"><span class="initials-avatar" aria-hidden="true"><%= String(user.name || '').trim().split(/\s+/u).filter(Boolean).slice(0,2).map(part => Array.from(part)[0]).join('').toUpperCase() || '?' %></span><h1><%= user.name || 'Your dashboard' %></h1></div>
+   <time id="live-clock" class="live-clock" aria-label="Current local time">—</time>
+   <div class="header-date"><div><span id="header-weekday"></span><span id="header-month"></span></div><button id="browse-dates" class="header-date-button" type="button" aria-label="Browse dates" aria-expanded="false" aria-controls="date-browser" aria-haspopup="dialog"><span id="header-day" class="header-day">—</span></button></div>
+  </header>
+  <section class="week-calendar" aria-label="Week date navigation"><button id="previous-week" class="week-control" type="button" aria-label="Previous week">←</button><ol id="week-strip" class="week-strip"></ol><button id="next-week" class="week-control" type="button" aria-label="Next week">→</button><button id="week-today" class="week-control" type="button">Today</button></section>
+  <div id="history-context" class="history-context" hidden><div><h2 id="selected-date-label" tabindex="-1"></h2><p>Date browsing is read-only. Return to today to make changes.</p></div><button id="back-to-today" type="button">Back to today</button></div>
+  <div class="dashboard-feedback"><p id="dashboard-status" role="status"></p><button id="retry-dashboard" type="button" hidden>Try again ↻</button></div>
+  <div id="dashboard-workspace" class="dashboard-workspace" data-mode="today">
+   <section id="dashboard-grid" class="dashboard-grid" aria-label="Today's habit summary"><article class="panel progress-panel">
+    <div class="panel-topline"><h2>Today’s progress</h2><span class="panel-symbol" aria-hidden="true">✳</span></div>
+    <p class="completion-number"><span id="habit-progress">—</span><span class="completion-caption">completed today</span></p>
+    <div class="meter" role="progressbar" aria-label="Today's habit completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="habit-progress-bar" class="meter-fill"></div></div>
+    <p id="habit-progress-note" class="muted-copy">Loading today’s progress…</p>
+   </article></section>
 
-  <body>
-    <!-- Dashboard page: shows user progress, budget status, and quick navigation -->
-    <!-- Navbar -->
-    <%- include("partials/navbar") %>
-
-    <!-- Greeting + Progress -->
-    <div class="container mt-5">
-      <div class="row g-4">
-        <div class="col-12">
-          <div class="card p-5 app-card text-center">
-            <h2>Hello, <%= user.name %> 👋</h2>
-
-            <p class="mt-3 fs-5">
-              You completed
-              <span id="habit-progress">0/0</span> habits today
-            </p>
-          </div>
-        </div>
-      </div>
+   <article data-today-only class="panel budget-panel">
+    <div class="panel-topline"><h2>Monthly budget</h2><a class="text-link" href="/expenses">View budget ↗</a></div>
+    <div class="budget-figures">
+     <div><p class="budget-number" id="dashboard-budget">—</p><p class="number-caption">remaining <span id="budget-total"></span></p></div>
+     <div class="spent-figure"><p class="budget-number" id="budget-spent">—</p><p class="number-caption">spent this month</p></div>
     </div>
+    <div class="budget-meter-label"><span id="budget-percentage">—</span></div>
+    <div class="meter budget-meter" role="progressbar" aria-label="Budget remaining" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="budget-bar" class="meter-fill"></div></div>
+    <p id="budget-warning" class="budget-warning" hidden></p>
+    <p id="budget-status" class="inline-status" role="status"></p>
+   </article>
 
-    <!-- Budget -->
-    <div class="container mt-5">
-      <div class="row g-4">
-        <div class="col-12">
-          <div class="card p-5 app-card text-center">
-            <h4>Remaining Budget</h4>
-            <h2 id="dashboard-budget">৳ 0</h2>
-
-            <span
-              id="budget-warning"
-              class="badge mt-2"
-              style="display: none"
-            ></span>
-          </div>
-          <div class="progress mt-3">
-            <div id="budget-bar" class="progress-bar"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Navigation Buttons -->
-    <div
-      class="container mt-5 mb-4 d-flex justify-content-center gap-4 flex-wrap"
-    >
-      <a href="/habits" class="btn btn-outline-success px-4">Add Habits</a>
-      <a href="/expenses" class="btn btn-outline-warning px-4">Show Expenses</a>
-      <a href="/" class="btn btn-outline-danger px-4">Go to Home</a>
-      <a href="/leaderboard" class="btn btn-outline-info px-4"
-        >🏆 Leaderboard</a
-      >
-
-      <a href="/savings" class="btn btn-outline-success px-4">Savings</a>
-    </div>
-
-    <!-- Footer -->
-    <%- include("partials/footer") %>
-
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
-    <script type="module">
-      import { initDashboard } from "/js/dashboard.js";
-      initDashboard();
-    </script>
-  </body>
-</html>
+<div class="dashboard-summary-savings"><article class="panel savings-panel" aria-label="Current savings progress">
+   <div id="savings-goal" hidden>
+    <select id="savings-selector" aria-label="Select savings goal" hidden></select>
+    <a id="savings-link" class="savings-link" href="/savings" title="Current savings progress, including when browsing past dates">
+     <span id="savings-goal-name"></span>
+     <span id="savings-progress" class="savings-ring" role="progressbar" aria-label="Current savings goal progress" aria-valuemin="0" aria-valuemax="100">
+      <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><circle class="savings-track" cx="50" cy="50" r="44"/><circle id="savings-arc" cx="50" cy="50" r="44" pathLength="100"/></svg>
+      <span id="savings-percentage">—</span>
+     </span>
+    </a>
+   </div>
+   <p id="savings-status" class="inline-status" role="status">Loading savings…</p><button id="retry-savings" type="button" hidden>Retry</button>
+   <a id="savings-empty-link" class="text-link" href="/savings" hidden>View Savings</a>
+  </article></div>
+<div class="dashboard-lower">
+<div class="dashboard-habit-group"><article data-today-only class="panel habits-panel" aria-label="Habit check-in">
+    <div class="panel-topline"><h2>Today’s habits</h2><span id="habits-count" class="compact-detail"></span></div>
+    <ul id="today-habits" class="habit-list" aria-live="polite"><li class="empty-state">Loading your habits…</li></ul>
+    <p id="habit-status" class="inline-status" role="status"></p>
+    <a class="text-link card-bottom" href="/habits">View all habits <span id="habits-more" class="compact-detail">↗</span></a>
+   </article><article class="panel universal-streak-panel" aria-label="Universal day streak"><h2>Streak</h2><p id="streak-asof" class="module-context" hidden></p><p class="streak-figure"><span id="universal-streak">—</span><span>days</span></p><p id="streak-status" class="inline-status" role="status">Loading streak…</p><button id="retry-streak" class="module-retry" type="button" hidden>Retry</button></article></div>
+<section id="history-view" class="history-view" aria-label="Selected-day recorded activity" hidden>
+   <article class="panel historical-summary"><h2>Recorded spending</h2><p id="history-spent" class="budget-number">—</p><p>For the selected day · not a historical budget balance</p></article>
+   <article class="panel"><h2>Recorded habit completions</h2><ul id="history-habits" class="history-list"></ul><p id="history-habits-status" class="inline-status" role="status"></p><button id="retry-history-habits" type="button" hidden>Retry completions</button></article>
+   <article class="panel historical-expenses"><h2>Recorded expenses</h2><ul id="history-expenses" class="expense-list"></ul><p id="history-expenses-status" class="inline-status" role="status"></p><button id="retry-history-expenses" type="button" hidden>Retry expenses</button></article>
+  </section>
+<article data-today-only class="panel activity-panel">
+    <div class="panel-topline"><h2>Recent expenses</h2><span class="panel-symbol" aria-hidden="true">↗</span></div>
+    <ul id="recent-expenses" class="expense-list" aria-live="polite"><li class="empty-state">Loading recent expenses…</li></ul>
+    <a class="text-link card-bottom" href="/expenses">View all expenses <span id="expenses-more" class="compact-detail">↗</span></a>
+   </article>
+<div class="dashboard-entry-group"><article data-today-only class="panel quick-entry-panel">
+    <div class="panel-topline"><h2>Log an expense</h2><span class="panel-symbol" aria-hidden="true">＋</span></div>
+    <form action="/add-expense" method="post" class="expense-form">
+     <div class="description-field"><input id="expense-name" name="name" type="text" aria-label="Expense description" placeholder="" maxlength="120" required /></div>
+     <div class="expense-date-field"><input id="expense-date" name="date" type="date" aria-label="Expense date" required /></div>
+     <div><label for="expense-amount">Amount · Tk</label><div class="amount-field"><span aria-hidden="true">Tk</span><input id="expense-amount" name="amount" type="number" min="0.01" step="0.01" placeholder="0.00" required /></div></div>
+     <div class="category-field"><label for="expense-category">Category <span class="optional-label">(optional)</span></label><select id="expense-category" name="category"><option value="uncategorized">Uncategorized</option><option value="transport">Transport</option><option value="food">Food</option><option value="subscriptions">Subscriptions</option><option value="shopping">Shopping</option></select></div>
+     <button class="primary-action" type="submit">Add expense <span aria-hidden="true">↗</span></button>
+     <p id="expense-status" class="inline-status" role="status"></p>
+    </form>
+   </article><%- include("partials/dashboard-spending") %></div>
+</div>
+  </div>
+ </main>
+ <dialog id="date-browser" class="date-browser" aria-labelledby="date-picker-title" hidden>
+  <div class="date-browser-toolbar"><h2 id="date-picker-title">Choose a date</h2><button id="close-date-browser" type="button" aria-label="Close date picker">Close ×</button></div>
+  <div class="date-jump-controls"><button id="previous-month" type="button" aria-label="Previous month">←</button><h3 id="browser-month"></h3><button id="next-month" type="button" aria-label="Next month">→</button><button id="picker-today" type="button">Today</button></div>
+  <div class="marker-status"><p id="month-status" role="status"></p><button id="retry-month" type="button" hidden>Retry</button></div>
+  <ol id="date-rows" class="date-rows" aria-label="Dates; use arrow keys to navigate"></ol>
+ </dialog>
+ <script type="module">import { initDashboard } from "/js/dashboard.js"; initDashboard();</script>
+</body></html>

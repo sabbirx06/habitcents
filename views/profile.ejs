@@ -1,0 +1,5 @@
+<%- include("partials/head", { title: "Profile · HabitCents", css: ["/css/base.css"] }) %>
+<body>
+ <%- include("partials/navbar") %>
+ <main class="profile-page app-card"><h1>Profile</h1><p class="profile-name"><%= user.name || 'Your account' %></p><a class="profile-logout" href="/logout">Log out</a></main>
+</body></html>

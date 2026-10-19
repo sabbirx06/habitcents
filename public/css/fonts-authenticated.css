@@ -1,0 +1,47 @@
+/* Web embedding rights confirmed by the user. Standard, unchanged OTF assets.
+   Register each supplied face at its actual weight/style; never synthesize. */
+@font-face {
+  font-family: 'Neue Haas Grotesk Text';
+  src: url('/fonts/NeueHaasGrotText-55Roman-Trial.otf') format('opentype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Neue Haas Grotesk Display';
+  src: url('/fonts/NeueHaasGrotDisp-55Roman-Trial.otf') format('opentype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Neue Haas Grotesk Text';
+  src: url('/fonts/NeueHaasGrotText-65Medium-Trial.otf') format('opentype');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Neue Haas Grotesk Text';
+  src: url('/fonts/NeueHaasGrotText-75Bold-Trial.otf') format('opentype');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Neue Haas Grotesk Display';
+  src: url('/fonts/NeueHaasGrotDisp-65Medium-Trial.otf') format('opentype');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+:root {
+  --font-text: 'Neue Haas Grotesk Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-display: 'Neue Haas Grotesk Display', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-sans: var(--font-text);
+  /* Existing compact-date consumers now use Roman Text rather than a mono face. */
+  --font-mono: var(--font-text);
+  font-synthesis: none;
+}
+body { font-family: var(--font-text); font-weight: 400; }
+button, input, select, textarea { font: inherit; }

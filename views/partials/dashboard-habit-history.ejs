@@ -1,0 +1,12 @@
+<article class="panel continuity-panel" aria-labelledby="continuity-name<%= suffix %>">
+ <div class="continuity-topline"><h3 id="continuity-name<%= suffix %>">Habit history</h3><details class="history-menu"><summary aria-label="Habit history options" title="History options">⋯</summary><div class="history-menu-content">
+  <div id="continuity-change<%= suffix %>" class="continuity-change"><label for="continuity-habit<%= suffix %>">Habit</label><select id="continuity-habit<%= suffix %>" aria-label="<%= index===0?'First':'Second' %> habit for continuity" disabled><option>Loading habits…</option></select></div>
+  <details class="continuity-help"><summary>Inspect dates &amp; cell states</summary><p class="module-context">Filled squares are recorded completions. Neutral squares are unrecorded; dotted squares have loading or unavailable data. Neither means missed. Dashed squares are future dates; striped squares precede known creation. Use arrow keys in the grid, or inspect a date below.</p><select id="continuity-inspect<%= suffix %>" aria-label="Inspect <%= index===0?'first':'second' %> habit dates"></select><button id="continuity-open<%= suffix %>" type="button">View date</button><p id="continuity-note<%= suffix %>" class="module-context"></p></details>
+  <a class="history-link" href="/habits" aria-label="View habits">Habits ↗</a>
+ </div></details></div>
+ <p id="continuity-range<%= suffix %>" class="module-context"></p>
+ <div class="continuity-chart"><div class="continuity-weekdays" aria-hidden="true"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div><div id="continuity-grid<%= suffix %>" class="continuity-grid" role="group" aria-label="Habit dates"></div></div>
+ <p id="continuity-detail<%= suffix %>" class="module-context" aria-live="polite"></p>
+ <div class="continuity-feedback"><p id="continuity-status<%= suffix %>" class="inline-status" role="status">Loading habits…</p><button id="retry-continuity<%= suffix %>" class="module-retry" type="button" hidden>Retry</button></div>
+ <a id="continuity-add<%= suffix %>" class="text-link" href="/habits" hidden>Add a habit ↗</a>
+</article>
