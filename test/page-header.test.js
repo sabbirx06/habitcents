@@ -19,7 +19,7 @@ test('all authenticated pages render one shared banner and one heading before re
       if (page === 'savings') assert.equal((html.match(/id="goal-new"/g) || []).length, 1);
       if (page === 'expenses') {
         assert.equal((html.match(/id="expense-new"/g) || []).length, 1);
-        assert.match(html, /page-header-right"><div class="header-expense-actions"><div class="month-picker">/);
+        assert.match(html, /page-header-right"><button id="expense-new" class="page-header-action header-primary-action"/);
       }
     }
   }

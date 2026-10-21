@@ -27,7 +27,7 @@ body { --dock-clearance:calc(84px + env(safe-area-inset-bottom,0px));padding-bot
 .dock-tooltip { position:absolute;bottom:calc(100% + 10px);left:50%;translate:-50% 0;white-space:nowrap;border:1px solid var(--dock-ink);border-radius:8px;padding:.3rem .55rem;background:var(--dock-ink);color:var(--dock-surface);font-size:.8rem;line-height:1.5;visibility:hidden;opacity:0;pointer-events:none;transition:opacity 140ms ease; }
 .nav-dock:not([data-tooltips-dismissed]) .dock-link:is(:hover,:focus-visible) .dock-tooltip { visibility:visible;opacity:1; }
 @media(max-width:380px) { .nav-dock { gap:2px;padding:5px; }.dock-links { gap:0; }.dock-link { width:44px;height:44px; }.dock-separator { margin:0 2px; } }
-@media(prefers-reduced-motion:reduce) { .dock-link,.dock-tooltip { transition:none; } }
+
 .app-card{background:var(--surface);color:var(--ink);border:var(--border);border-radius:var(--radius-sm);box-shadow:0 3px 12px #22232005}
 body .btn-outline-light{color:var(--ink);border-color:var(--muted)}
 footer{margin-top:auto;background:transparent;color:var(--muted);font-size:.75rem;padding:1rem}

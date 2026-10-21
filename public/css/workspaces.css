@@ -890,21 +890,8 @@
     font-size: 1.1rem;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .workspace-dialog[open] {
-    animation: none;
-  }
-  .workspace-button,
-  .workspace-meter > span,
-  .goal-ring .arc {
-    transition: none;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .workspace-dialog {
-    transition: none;
-  }
-}
+
+
 
 /* Compact reference composition, scoped to authenticated workspaces. */
 .workspace-sr-only {

@@ -19,10 +19,11 @@ function compactItems(items, key, characterLimit = 300, limit = LIST_LIMIT) {
 }
 const $ = (selector) => document.querySelector(selector);
 function text(selector, value) {
+  globalThis.HabitMotion?.cancel(selector);
   const node = $(selector);
-  if (node) node.textContent = value;
+  if (node) { node.textContent = value;if(value==='—'||value===''||value==='Not set')node.removeAttribute?.('aria-label'); }
 }
-function money(selector, value, context = "") {
+function money(selector, value, context = "", source = value) {
   const node = $(selector),
     parts = decimal.formatToParts(value);
   const prefix = document.createElement("span");
@@ -49,8 +50,13 @@ function money(selector, value, context = "") {
     children.unshift(label);
   }
   node.replaceChildren(...children);
-  node.dataset.size = Math.abs(value) >= 1000000 ? "long" : "normal";
-  node.setAttribute("aria-label", context + currency.format(value));
+  node.dataset.size = Math.abs(source) >= 1000000 ? "long" : "normal";
+  const accessible = context + currency.format(source);
+  if(node.getAttribute?.('aria-label') !== accessible) node.setAttribute("aria-label", accessible);
+}
+function present(selector, target, paint, options) {
+  if(globalThis.HabitMotion) globalThis.HabitMotion.values($(selector),selector,target,paint,options);
+  else paint(target);
 }
 function status(selector, message, success = false) {
   text(selector, message);
@@ -216,8 +222,11 @@ async function loadOverview() {
   const completed = Number(data.completed),
     total = Number(data.totalHabits),
     ratio = total ? Math.min(100, (completed / total) * 100) : 0;
-  text("#habit-progress", `${completed}/${total}`);
-  $("#habit-progress-bar").style.width = `${ratio}%`;
+  $("#habit-progress").setAttribute('aria-label',`${completed} of ${total} habits completed`);
+  present('#habit-progress',{completed,total,percent:ratio},frame=>{
+    $("#habit-progress").textContent = `${Math.round(frame.completed)}/${Math.round(frame.total)}`;
+    $("#habit-progress-bar").style.width = `${frame.percent}%`;
+  },{initial:{total}});
   $("#habit-progress-bar").parentElement.setAttribute(
     "aria-valuenow",
     Math.round(ratio),
@@ -237,20 +246,26 @@ async function loadOverview() {
     hasBudget = data.hasBudget;
   const remainingRatio =
     budget > 0 ? Math.max(0, Math.min(100, (remaining / budget) * 100)) : 0;
-  if (hasBudget) money("#dashboard-budget", remaining);
-  else text("#dashboard-budget", "Not set");
-  money("#budget-spent", budget - remaining);
+  if (hasBudget) present('#dashboard-budget',{remaining,spent:budget-remaining,percent:remainingRatio},frame=>{
+    money('#dashboard-budget',frame.remaining,'',remaining);
+    money('#budget-spent',frame.spent,'',budget-remaining);
+    $('#budget-percentage').textContent = Math.round(frame.percent)+'% available';
+    $('#budget-bar').style.width = frame.percent+'%';
+  });
+  else {
+    text("#dashboard-budget", "Not set");
+    money("#budget-spent", budget - remaining);
+    $('#budget-bar').style.width = '0%';
+  }
   if (hasBudget) money("#budget-total", budget);
   else text("#budget-total", "No monthly budget");
-  text(
-    "#budget-percentage",
-    hasBudget ? `${Math.round(remainingRatio)}% available` : "Not set",
-  );
-  $("#budget-bar").style.width = `${remainingRatio}%`;
+  if(!hasBudget) text('#budget-percentage','Not set');
+  $('#budget-percentage').setAttribute('aria-label',hasBudget ? `${Math.round(remainingRatio)}% available` : 'Not set');
   $("#budget-bar").parentElement.setAttribute(
     "aria-valuenow",
     Math.round(remainingRatio),
   );
+  if(!hasBudget) $('#budget-bar').parentElement.removeAttribute('aria-valuenow');
   $("#budget-bar").parentElement.setAttribute(
     "aria-valuetext",
     hasBudget
@@ -294,7 +309,8 @@ async function loadTodayHabits() {
       const item = document.createElement("li"),
         label = document.createElement("label"),
         checkbox = document.createElement("input"),
-        name = document.createElement("span");
+        name = document.createElement("span"),
+        mark = document.createElement("span");
       item.className = `habit-row${habit.completed ? " is-complete" : ""}`;
       checkbox.type = "checkbox";
       checkbox.checked = Boolean(habit.completed);
@@ -302,8 +318,16 @@ async function loadTodayHabits() {
       checkbox.setAttribute("aria-label", `Check in: ${habit.habit_name}`);
       name.className = "habit-name";
       name.textContent = habit.habit_name;
+      mark.className = "habit-checkmark";
+      mark.setAttribute("aria-hidden", "true");
       label.className = "habit-row-content";
-      label.append(checkbox, name);
+      label.append(checkbox, name, mark);
+      if(habit.target != null) {
+        const progress = document.createElement('small');
+        progress.className='habit-current-target';
+        progress.textContent=(habit.progress_amount ?? (habit.completed ? habit.target : '—'))+' / '+habit.target+' '+(habit.unit || '');
+        name.append(progress);
+      }
       item.append(label);
       return item;
     }),
@@ -454,6 +478,7 @@ async function initializeDashboard({ now } = {}) {
       checkbox
         .closest(".habit-row")
         .classList.toggle("is-complete", checkbox.checked);
+      if(checkbox.checked) globalThis.HabitMotion?.pop(checkbox.parentElement?.querySelector?.('.habit-checkmark'));
       status(
         "#habit-status",
         checkbox.checked ? "Habit checked in." : "Check-in removed.",
@@ -750,13 +775,14 @@ function renderSavingsGoal(index) {
   });
   text("#savings-goal-name", goal.name);
   $("#savings-goal-name").title = goal.name;
-  text("#savings-percentage", available ? Math.round(progress) + "%" : "—");
-  $("#savings-arc").style.strokeDasharray = available
-    ? progress + " 100"
-    : "0 100";
+  if(available) present('#savings-percentage',{percent:progress},frame=>{
+    $('#savings-percentage').textContent=Math.round(frame.percent)+'%';
+    $('#savings-arc').style.strokeDasharray=frame.percent+' 100';
+    $('#savings-progress').style.setProperty('--savings-fill',frame.percent+'%');
+  });
+  else { text('#savings-percentage','—');$('#savings-arc').style.strokeDasharray='0 100';$('#savings-progress').style.setProperty('--savings-fill','0%'); }
   $("#savings-arc").style.opacity = available && progress > 0 ? "1" : "0";
   const ring = $("#savings-progress");
-  ring.style.setProperty("--savings-fill", `${available ? progress : 0}%`);
   if (available)
     ring.setAttribute("aria-valuenow", String(Math.round(progress)));
   else ring.removeAttribute("aria-valuenow");
@@ -779,7 +805,7 @@ function renderSavingsGoal(index) {
 async function loadSavings() {
   const retry = $("#retry-savings");
   if (retry) retry.disabled = true;
-  $("#savings-goal").hidden = true;
+  if(!savingsGoals.length) $("#savings-goal").hidden = true;
   $("#savings-empty-link").hidden = true;
   status("#savings-status", "Loading savings…");
   try {
@@ -816,6 +842,7 @@ async function loadSavings() {
     $("#savings-empty-link").hidden = !!summary.goal;
     retry.hidden = true;
   } catch {
+    globalThis.HabitMotion?.cancel('#savings-percentage');
     savingsGoals = [];
     $("#savings-goal").hidden = true;
     status("#savings-status", "Savings unavailable.");
@@ -1102,7 +1129,7 @@ async function loadRangeMarkers() {
 }
 function dateScrollBehavior(smooth = true) {
   return smooth &&
-    !globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+    !(globalThis.HabitMotionPreference?.reduced() ?? true)
     ? "smooth"
     : "instant";
 }
@@ -1186,6 +1213,7 @@ function openDateBrowser() {
   centerPicker(view.mode === "history" ? view.selected : readLocalDay());
 }
 function finishDateBrowser() {
+  clearTimeout(closeTimer);
   const dialog = $("#date-browser");
   dialog.close?.();
   dialog.hidden = true;
@@ -1207,11 +1235,14 @@ function closeDateBrowser() {
   dialog.classList.add?.("closing");
   if (
     !dialog.open ||
-    globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+    (globalThis.HabitMotionPreference?.reduced() ?? true)
   )
     finishDateBrowser();
   else closeTimer = setTimeout(finishDateBrowser, 200);
 }
+globalThis.addEventListener?.('habitmotionchange', () => {
+  if (closeTimer && (globalThis.HabitMotionPreference?.reduced() ?? true)) finishDateBrowser();
+});
 function extendPicker() {
   if (!view.browser || extending) return;
   const list = $("#date-rows");
@@ -1856,6 +1887,7 @@ async function loadSpending() {
     );
     $("#spending-chart").hidden = false;
     updateSpendingScale();
+    globalThis.HabitMotion?.bars($('#spending-bars'),'spending:'+start+':'+end);
     status(
       "#spending-status",
       data.days.length ? "" : "No expenses recorded in this period.",
@@ -2104,9 +2136,13 @@ async function loadUniversalStreak() {
     generation = view.generation,
     history = view.mode === "history",
     date = history ? view.selected : null;
-  text("#universal-streak", "—");
-  $("#universal-streak").removeAttribute("aria-label");
-  $("#universal-streak").dataset.state = "unavailable";
+  const context = date || readLocalDay();
+  if($('#universal-streak').dataset.context !== context){
+    text("#universal-streak", "—");
+    $("#universal-streak").removeAttribute("aria-label");
+    $("#universal-streak").dataset.state = "unavailable";
+    $('#universal-streak').dataset.context = context;
+  }
   status("#streak-status", "Loading streak…");
   $("#retry-streak").hidden = true;
   text("#streak-asof", history ? "As of " + localRangeLabel(date, date) : "");
@@ -2126,7 +2162,7 @@ async function loadUniversalStreak() {
     if (data.status === "available") {
       if (!Number.isSafeInteger(data.count) || data.count < 0)
         throw new Error("Invalid streak count");
-      text("#universal-streak", data.count);
+      present('#universal-streak',{count:data.count},frame=>$('#universal-streak').textContent=Math.round(frame.count));
       $("#universal-streak").dataset.state = "ready";
       $("#universal-streak").setAttribute(
         "aria-label",
@@ -2134,6 +2170,7 @@ async function loadUniversalStreak() {
       );
       status("#streak-status", "", true);
     } else if (data.status === "setup-required" && data.count === null) {
+      text('#universal-streak','—');$('#universal-streak').dataset.state='unavailable';
       if (!history) {
         status("#streak-status", "Streak tracking needs setup.");
         return;
@@ -2148,6 +2185,7 @@ async function loadUniversalStreak() {
     } else throw new Error("Invalid streak status");
   } catch {
     if (token !== streakRequest || generation !== view.generation) return;
+    text('#universal-streak','—');$('#universal-streak').dataset.state='unavailable';
     status("#streak-status", "Streak unavailable.");
     $("#retry-streak").hidden = false;
   }

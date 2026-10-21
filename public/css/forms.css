@@ -1,0 +1,65 @@
+.workspace-form { gap:.85rem; }
+.workspace-form label,.workspace-form fieldset { min-width:0; }
+.workspace-form input:not([type=radio]):not([type=checkbox]):not([type=range]),.workspace-form select,.workspace-form textarea { min-height:46px;width:100%;padding:.65rem .8rem;border:1px solid #c8c7bb;border-radius:12px;background:#eeece4;color:var(--ink); }
+.workspace-form .workspace-label,.workspace-form legend { font-size:.88rem;font-weight:500;margin-bottom:.4rem; }
+.workspace-form .actions { align-items:center;margin-top:.2rem; }
+.workspace-form .actions button { min-height:44px; }
+.choice-field { border:0;padding:0;margin:0;min-inline-size:0; }
+.choice-options { display:flex;flex-wrap:wrap;gap:6px; }
+.choice-options label { position:relative;display:flex;align-items:center;justify-content:center;gap:.5rem;min-height:44px;padding:.55rem .85rem;border:1px solid var(--line);border-radius:12px;background:#eeece4;cursor:pointer;transition:background-color var(--motion-control,190ms) var(--ease-out,ease-out),border-color var(--motion-control,190ms),box-shadow var(--motion-control,190ms); }
+.choice-options input { position:absolute;width:1px;height:1px;opacity:0; }
+.choice-options label:has(input:checked) { border-color:var(--ink);background:var(--ink);color:var(--surface);box-shadow:0 0 0 1px var(--ink); }
+.choice-options label:has(input:focus-visible) { outline:3px solid #315a89;outline-offset:3px; }
+.segments .choice-options label { flex:1;min-width:0;padding:.55rem .45rem;font-size:.82rem;text-align:center; }
+.choice-options svg { width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round; }
+.choice-field.icon-choices .choice-options { display:grid;grid-template-columns:repeat(6,minmax(0,1fr)); }
+.choice-field.category-choices .choice-options { display:grid;grid-template-columns:repeat(5,minmax(0,1fr)); }
+.category-choices .choice-options label { flex-direction:column;font-size:.75rem;padding:.5rem .2rem; }
+.category-choices .transaction-icon { width:32px;height:32px; }
+.icon-choices .choice-options label { flex-direction:column;font-size:.75rem;min-height:72px;padding:.5rem .25rem; }
+.color-choices .choice-options label { flex-direction:column;min-width:72px;font-size:.72rem;background:transparent;color:var(--ink); }
+.color-choices .choice-options label:has(input:checked) { background:#eeece4;color:var(--ink); }
+.color-swatch { width:30px;height:30px;border-radius:50%;border:1px solid #22232026; }
+.color-choices label:has(input:checked) .color-swatch::after { content:'✓';display:grid;place-items:center;height:100%;color:var(--ink);font-size:1rem;font-weight:700; }
+.weekday-choices { gap:6px; }
+.weekday-choices label { position:relative;display:grid;place-items:center;min-width:44px;min-height:44px;padding:.4rem;border:1px solid var(--line);border-radius:999px;background:#eeece4;cursor:pointer; }
+.weekday-choices input { position:absolute;opacity:0;width:1px;height:1px; }
+.weekday-choices label:has(input:checked) { color:var(--surface);background:var(--ink);border-color:var(--ink); }
+.weekday-choices label:has(input:focus-visible) { outline:3px solid #315a89;outline-offset:3px; }
+.schedule-days { border:0;padding:0;margin:0; }
+.schedule-days>.workspace-button { margin-bottom:.5rem; }
+.form-disclosure { border-top:1px solid var(--line);padding-top:.25rem; }
+.form-disclosure summary { color:var(--muted);font-size:.9rem; }
+.form-disclosure-fields { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem;padding:.6rem 0; }
+.duration-field { display:grid;grid-template-columns:minmax(0,1fr) minmax(100px,1fr);gap:.5rem .8rem;align-items:end; }
+.duration-field input[type=range] { width:100%;min-height:44px;accent-color:var(--ink); }
+.duration-presets { grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px; }
+.duration-presets button { font-size:.8rem;min-height:36px;padding:.3rem .7rem; }
+.toggle-label { display:flex;align-items:center;gap:.6rem;min-height:44px; }
+.toggle-label input { width:20px;height:20px;accent-color:var(--ink); }
+.optional-field>.calendar-field { margin-top:.5rem; }
+.date-control { display:flex;align-items:center;position:relative; }
+.calendar-field>label { display:block; }
+.date-control input { padding-right:48px!important; }
+.date-control input::-webkit-calendar-picker-indicator { display:none; }
+.calendar-trigger { display:grid;place-items:center;position:absolute;right:2px;top:2px;bottom:2px;width:42px;min-height:42px;border:0;border-radius:10px;background:transparent;color:var(--ink);font-size:1.3rem;cursor:pointer; }
+.calendar-trigger svg { width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round; }
+.calendar-trigger:hover { background:#2223200a; }
+.date-popover { position:fixed;inset:auto;margin:0;width:310px;max-width:calc(100vw - 16px);padding:.7rem;border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--ink);box-shadow:0 12px 32px #22232024; }
+.date-popover:popover-open { animation:dialog-scale-in var(--motion-layout,220ms) ease-out; }
+.calendar-heading { display:flex;align-items:center;justify-content:space-between;gap:.4rem;margin-bottom:.4rem; }
+.calendar-heading .workspace-button { min-height:40px;padding:.3rem .65rem; }
+.calendar-grid>[role=row] { display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px; }
+.calendar-weekdays span { text-align:center;font-size:.72rem;color:var(--muted);padding:.35rem 0; }
+.calendar-grid button { min-height:44px;border:0;border-radius:10px;background:transparent;color:var(--ink);padding:0;font-size:.85rem; }
+.calendar-grid button[data-outside=true] { color:var(--muted); }
+.calendar-grid button[aria-current=date] { box-shadow:inset 0 0 0 1px var(--ink); }
+.calendar-grid button[aria-selected=true] { background:var(--ink);color:var(--surface); }
+.calendar-grid button:hover { background:#22232014; }
+.calendar-grid button[aria-selected=true]:hover { background:var(--ink); }
+.calendar-actions { display:flex;justify-content:space-between;gap:.5rem;margin-top:.4rem; }
+.calendar-actions button { font-size:.8rem;min-height:38px;padding:.3rem .7rem; }
+.tracking-fields { display:contents; }
+.habit-editor-preview { display:flex;align-items:center;gap:.7rem;min-height:44px;font-size:.9rem;overflow-wrap:anywhere; }
+.habit-editor-preview .habit-identity { width:38px;height:38px; }
+@media(max-width:520px) { .workspace-dialog { padding:1rem; }.workspace-form { grid-template-columns:minmax(0,1fr); }.choice-field.icon-choices .choice-options,.choice-field.category-choices .choice-options { grid-template-columns:repeat(3,minmax(0,1fr)); }.form-disclosure-fields { grid-template-columns:minmax(0,1fr); }.color-choices .choice-options label { min-width:62px; }.duration-field { grid-template-columns:minmax(0,1fr); } }

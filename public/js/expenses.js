@@ -22,6 +22,11 @@ import {
   bindWorkspaceRefresh,
   moneyFigure,
   bindPanel,
+  choiceField,
+  calendarField,
+  animateValues,
+  cancelMetric,
+  moneyMetric,
 } from "./workspace.js";
 import { spendingScale } from "./dashboard.js";
 let data = null,
@@ -55,8 +60,8 @@ function editExpense(expense = {}) {
       max: 99999999.99,
       step: ".01",
     }),
-    field("Date", "date", "date", expense.date || localDay(), { required: "" }),
-    categoryField(expense.category),
+    calendarField("Date", "date", expense.date || localDay(), { required: "" }),
+    choiceField('Category','category',Object.entries(categories).map(([id,c])=>[id,c.name,{render:()=>{const tile=categoryIcon(id);tile.style.setProperty('--category-color',c.color);return tile;}}]),expense.category || 'uncategorized','category-choices'),
   ];
   const extra = expense.expense_id
     ? [
@@ -84,7 +89,7 @@ function editExpense(expense = {}) {
       notifyChange();
       await loadExpenses();
     },
-    { extra },
+    { extra, submit: expense.expense_id ? 'Save expense' : 'Add expense' },
   );
 }
 function editBudget() {
@@ -108,24 +113,35 @@ function editBudget() {
       notifyChange();
       await loadExpenses();
     },
+    { submit: 'Save budget' },
   );
 }
 function renderBudget(total) {
   const budget = data.budget === null ? null : amountCents(data.budget),
     remaining = budget === null ? null : budget - total,
     p = budget ? Math.max(0, Math.min(100, (remaining / budget) * 100)) : 0;
-  if (remaining === null) $("#monthly-budget").textContent = "Not set";
-  else $("#monthly-budget").replaceChildren(moneyFigure(remaining / 100));
+  if (remaining === null) {
+    cancelMetric('expense-budget');$('#monthly-budget').textContent='Not set';$('#monthly-budget').removeAttribute('aria-label');
+    moneyMetric($('#expense-budget-spent'),'expense-spent',total/100);
+    $('#expense-budget-meter span').style.width='0%';$('#expense-budget-meter').removeAttribute('aria-valuenow');$('#expense-budget-meter').setAttribute('aria-valuetext','No monthly budget set');
+  } else {
+    cancelMetric('expense-spent');
+    $('#monthly-budget').setAttribute('aria-label',money(remaining/100));$('#expense-budget-spent').setAttribute('aria-label',money(total/100));
+    animateValues($('#monthly-budget'),'expense-budget',{remaining:remaining/100,spent:total/100,percent:p},frame=>{
+      $('#monthly-budget').replaceChildren(moneyFigure(frame.remaining));$('#expense-budget-spent').replaceChildren(moneyFigure(frame.spent));
+      $('#expense-budget-meter span').style.width=frame.percent+'%';
+      if(remaining>=0) $('#budget-warning').textContent=Math.round(frame.percent)+'% remaining';
+    });
+    $('#expense-budget-meter').setAttribute('aria-valuenow',Math.round(p));$('#expense-budget-meter').setAttribute('aria-valuetext',money(remaining/100)+' remaining');
+  }
   $("#expense-budget-total").textContent = budget === null ? "Not set" : money(budget / 100);
-  $("#expense-budget-spent").replaceChildren(moneyFigure(total / 100));
-  $("#expense-budget-meter span").style.width = p + "%";
-  $("#expense-budget-meter").setAttribute("aria-valuenow", Math.round(p));
-  $("#budget-warning").textContent =
+  if(budget === null || remaining < 0) $("#budget-warning").textContent =
     budget === null
       ? "Set a budget for this month before adding expenses."
       : remaining < 0
         ? "Over budget by " + money(-remaining / 100)
         : Math.round(p) + "% remaining";
+  $('#budget-warning').setAttribute('aria-label',budget === null ? 'No monthly budget set' : remaining < 0 ? 'Over budget by '+money(-remaining/100) : Math.round(p)+'% remaining');
 }
 function renderChart(series) {
   const days = monthDays(month).filter((d) => d <= data.today),
@@ -170,6 +186,7 @@ function renderChart(series) {
     return b;
   });
   $("#expense-bars").replaceChildren(...bars);
+  globalThis.HabitMotion?.bars($('#expense-bars'),'expenses-chart:'+month);
   $("#expense-x-axis").replaceChildren(
     ...[...new Set([days[0], days[Math.floor(days.length / 2)], days.at(-1)])]
       .filter(Boolean)
@@ -235,7 +252,7 @@ function renderBreakdown() {
         $("#transaction-category").value = id;
         renderTransactions();
         $("#expense-list").scrollIntoView({
-          behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+          behavior: (globalThis.HabitMotionPreference?.reduced() ?? true) ? "instant" : "smooth",
           block: "center",
         });
       },
@@ -260,6 +277,7 @@ function renderBreakdown() {
     donut.style.background = "conic-gradient(" + segments.join(",") + ")";
     donut.append(node("div", { class: "donut-center", "aria-hidden": "true" }));
     visual.append(donut);
+    globalThis.HabitMotion?.radial(donut,'category-donut:'+month);
   }
 }
 function renderTransactions() {
@@ -290,7 +308,7 @@ function renderTransactions() {
   $("#expense-list").replaceChildren(
     ...items.map((e) => {
       const c = categories[e.category] || categories.uncategorized,
-        li = node("li", { class: "transaction", "data-category": e.category });
+        li = node("li", { class: "transaction", "data-category": e.category, 'data-expense': e.expense_id });
       li.style.setProperty("--category-color", c.color);
       li.append(
         button("", () => editExpense(e), true),
@@ -386,9 +404,10 @@ export async function loadExpenses() {
     status("#expenses-status", "");
   } catch (e) {
     if (token !== generation) return;
+    cancelMetric('expense-budget');cancelMetric('expense-spent');
     data = null;
     for (const s of ["#monthly-budget", "#expense-budget-total", "#expense-budget-spent"])
-      $(s).textContent = "—";
+      { $(s).textContent = "—";$(s).removeAttribute('aria-label'); }
     for (const s of [
       "#expense-list",
       "#category-visual",
@@ -402,6 +421,7 @@ export async function loadExpenses() {
       $(s).replaceChildren();
     $("#expense-budget-meter span").style.width = "0%";
     $("#expense-budget-meter").removeAttribute("aria-valuenow");
+    $('#expense-budget-meter').setAttribute('aria-valuetext','Unavailable');
     $("#budget-warning").textContent = "";
     $("#transaction-count").textContent = "";
     $("#expense-chart-detail").textContent = "Chart unavailable.";
@@ -421,7 +441,7 @@ function recurringEditor(r = {}) {
         step: ".01",
       }),
       categoryField(r.category),
-      selectField(
+      choiceField(
         "Frequency",
         "frequency",
         [
@@ -431,8 +451,8 @@ function recurringEditor(r = {}) {
         ],
         r.frequency || "monthly",
       ),
-      field("Starts on", "starts_on", "date", r.starts_on || localDay(), { required: "" }),
-      field("Ends on (optional)", "ends_on", "date", r.ends_on),
+      calendarField("Starts on", "starts_on", r.starts_on || localDay(), { required: "" }),
+      calendarField("Ends on (optional)", "ends_on", r.ends_on),
       selectField(
         "Status",
         "enabled",
@@ -456,6 +476,7 @@ function recurringEditor(r = {}) {
       });
       await loadRecurring();
     },
+    { submit: r.recurring_id ? 'Save recurring expense' : 'Create recurring expense' },
   );
 }
 async function loadRecurring() {

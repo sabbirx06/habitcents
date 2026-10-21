@@ -102,7 +102,7 @@
  .completion-number>span:first-child { font-size:4.2rem; }
  .demo-notice { flex-wrap:wrap; gap:.3rem .65rem; }
 }
-@media (prefers-reduced-motion:reduce) { .meter-fill { transition:none; } }
+
 /* Keep descriptions full-width; date and amount share a compact second line. */
 .expense-row { display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:.75rem; row-gap:.15rem; }
 .expense-row>div { display:contents; }

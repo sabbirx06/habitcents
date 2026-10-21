@@ -5,7 +5,6 @@ import {
   localDay,
   button,
   field,
-  selectField,
   editor,
   confirmAction,
   modal,
@@ -13,8 +12,12 @@ import {
   displayDate,
   notifyChange,
   bindWorkspaceRefresh,
-  moneyFigure,
-  bindPanel,
+  choiceField,
+  durationField,
+  disclosure,
+  animateValues,
+  cancelMetric,
+  replaceList,
 } from "./workspace.js";
 let state = null,
   generation = 0,
@@ -62,8 +65,9 @@ export function habitCells({
   });
 }
 function habitIcon(icon) {
+  if (globalThis.HabitIcons) return globalThis.HabitIcons.tile(icon);
   const paths = {
-    check: "M5 12l4 4L19 6",
+    check: "M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z",
     book: "M4 4h7l1 2 1-2h7v15h-7l-1 1-1-1H4zM12 6v14",
     walk: "M12 3h1M10 7l3 2 3 1M12 8l-3 5-4 2M11 13l3 3 1 5M9 14l-2 7",
     water: "M12 3s-7 8-7 12a7 7 0 0014 0c0-4-7-12-7-12z",
@@ -74,7 +78,7 @@ function habitIcon(icon) {
     svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"),
     path = document.createElementNS(svg.namespaceURI, "path");
   svg.setAttribute("viewBox", "0 0 24 24");
-  path.setAttribute("d", paths[icon] || paths.check);
+  path.setAttribute("d", paths[icon] || paths.focus);
   svg.append(path);
   box.append(svg);
   return box;
@@ -109,11 +113,13 @@ function progressEditor(h) {
       notifyChange();
       await loadHabits();
     },
+    { submit: 'Record progress' },
   );
 }
 async function toggle(h, control) {
   if (h.target != null) return progressEditor(h);
   const before = h.completed;
+  const restoreFocus = document.activeElement === control;
   control.disabled = true;
   control.setAttribute("aria-pressed", !before);
   try {
@@ -124,6 +130,9 @@ async function toggle(h, control) {
     });
     notifyChange();
     await loadHabits();
+    const replacement=document.querySelector('[data-habit="'+h.habit_id+'"] .habit-complete');
+    if(restoreFocus)replacement?.focus();
+    if(!before) globalThis.HabitMotion?.pop(replacement);
   } catch (e) {
     control.setAttribute("aria-pressed", before);
     status("#habits-status", e.message, true);
@@ -153,34 +162,36 @@ function habitEditor(h = {}) {
       maxlength: 1000,
     }),
     category = field("Category (optional)", "category", "text", h.category, { maxlength: 50 }),
-    icon = selectField(
+    icon = choiceField(
       "Icon",
       "icon",
       [
-        ["check", "Check"],
-        ["book", "Book"],
-        ["walk", "Movement"],
-        ["water", "Water"],
-        ["leaf", "Nature"],
-        ["focus", "Focus"],
+        ["check", "Spark", { icon: "check" }],
+        ["book", "Book", { icon: "book" }],
+        ["walk", "Movement", { icon: "walk" }],
+        ["water", "Water", { icon: "water" }],
+        ["leaf", "Nature", { icon: "leaf" }],
+        ["focus", "Focus", { icon: "focus" }],
       ],
-      h.icon || "check",
+      h.icon || "focus",
+      'icon-choices',
     ),
-    color = selectField(
+    color = choiceField(
       "Color",
       "color",
       [
-        ["lavender", "Lavender"],
-        ["blue", "Powder blue"],
-        ["lime", "Pale lime"],
-        ["peach", "Peach"],
-        ["pink", "Lavender pink"],
+        ["lavender", "Lavender", { color: '#e0cfe0' }],
+        ["blue", "Blue", { color: '#c5d4e7' }],
+        ["lime", "Lime", { color: '#d6df9c' }],
+        ["peach", "Peach", { color: '#ead4c3' }],
+        ["pink", "Pink", { color: '#e5cde2' }],
       ],
       habitAccent(h, state?.categories),
+      'color-choices',
     );
   const days = node(
       "fieldset",
-      { class: "full" },
+      { class: "full schedule-days" },
       node("legend", { class: "workspace-label" }, "Scheduled days"),
     ),
     choices = node("div", { class: "weekday-choices" }),
@@ -207,42 +218,68 @@ function habitEditor(h = {}) {
     ),
     choices,
   );
-  const target = field("Daily target (optional)", "target", "number", h.target, {
+  const target = field("Daily target", "target", "number", h.target, {
       min: ".01",
       max: 99999999.99,
       step: ".01",
     }),
-    unit = field("Target unit (e.g. minutes)", "unit", "text", h.unit, { maxlength: 40 });
-  editor(
+    unit = field("Unit", "unit", "text", h.unit || 'times', { maxlength: 40 });
+  const tracking = choiceField('Track by', 'tracking', [['checkoff','Check-off'],['quantity','Quantity'],['duration','Duration']], h.target == null ? 'checkoff' : h.unit === 'minutes' ? 'duration' : 'quantity');
+  const repeat = choiceField('Repeat', 'repeat', [['daily','Every day'],['weekdays','Selected weekdays']], selected.length === 7 ? 'daily' : 'weekdays');
+  const quantityFields = node('div',{class:'tracking-fields full'},target,unit);
+  const duration = durationField(h.unit === 'minutes' ? h.target : 20, 'duration_target');
+  target.querySelector('input').required = true;
+  unit.querySelector('input').required = true;
+  const preview = node('div',{class:'habit-editor-preview full','aria-hidden':'true'});
+  name.classList.add('full');
+  const { form } = editor(
     h.habit_id ? "Edit habit" : "New habit",
     [
-      ...(!h.habit_id ? [state ? button("Choose a preset", presets, true) : node("p", {class:"workspace-muted full"}, "Presets are unavailable until habits load. You can still create a custom habit.")] : []),
       name,
-      description,
-      category,
+      preview,
+      tracking,
+      quantityFields,
+      duration,
+      repeat,
+      days,
       icon,
       color,
-      days,
-      target,
-      unit,
+      disclosure('Description and category', [description,category], !!(h.description || h.category)),
+      ...(!h.habit_id ? [state ? node('div',{class:'form-preset-row full'},button('Choose a preset',presets,true)) : node('p',{class:'workspace-muted full'},'Presets are unavailable until habits load.')] : []),
       node(
         "p",
         { class: "workspace-muted full" },
-        "Schedule and target changes apply today, preserving the rules recorded for earlier days. Leave target empty for a check/uncheck habit.",
+        "Selected weekdays repeat each week. Schedule and target changes apply from today; earlier records keep their original rules.",
       ),
     ],
     async (values, form) => {
+      const schedule = [...form.querySelectorAll('[name=weekday]:checked')].map(n => Number(n.value));
+      if(!schedule.length) throw Error('Select at least one weekday.');
       await api("/api/habits/save", {
         ...values,
+        target: values.tracking === 'checkoff' ? '' : values.tracking === 'duration' ? values.duration_target : values.target,
+        unit: values.tracking === 'checkoff' ? '' : values.tracking === 'duration' ? 'minutes' : values.unit,
         habit_id: h.habit_id,
-        schedule_days: [...form.querySelectorAll("[name=weekday]:checked")].map((n) =>
-          Number(n.value),
-        ),
+        schedule_days: schedule,
       });
       notifyChange();
       await loadHabits();
     },
+    { submit: h.habit_id ? 'Save habit' : 'Create habit' },
   );
+  const sync = () => {
+    const mode = form.querySelector('[name=tracking]:checked').value;
+    quantityFields.hidden = mode !== 'quantity'; duration.hidden = mode !== 'duration';
+    for (const field of quantityFields.querySelectorAll('input')) field.disabled = mode !== 'quantity';
+    for (const field of duration.querySelectorAll('input')) field.disabled = mode !== 'duration';
+    const daily = form.querySelector('[name=repeat]:checked').value === 'daily';
+    days.hidden = daily;
+    if(daily) choices.querySelectorAll('input').forEach(input => input.checked = true);
+    const selectedIcon = form.querySelector('[name=icon]:checked').value, selectedColor = form.querySelector('[name=color]:checked').value;
+    preview.style.setProperty('--habit-tone', { lavender:'#e0cfe0',blue:'#c5d4e7',lime:'#d6df9c',peach:'#ead4c3',pink:'#e5cde2' }[selectedColor]);
+    preview.replaceChildren(habitIcon(selectedIcon),node('span',{},name.querySelector('input').value || 'Your habit'));
+  };
+  form.addEventListener('change', sync); name.addEventListener('input', sync); sync();
 }
 function cellDescription(c) {
   return (
@@ -469,15 +506,22 @@ function renderHabits() {
     state.streak.status === "available" || state.streak.reason === "timezone-review-required";
   const due = state.habits.filter((h) => h.due_today && !h.archived_on),
     completed = due.filter((h) => h.completed);
-  $("#habit-summary").textContent = completed.length + "/" + due.length;
+  $('#habit-summary').setAttribute('aria-label',completed.length+' of '+due.length+' habits completed');
   $("#habit-summary-context").textContent = due.length - completed.length + " remaining today";
   const p = due.length ? (completed.length / due.length) * 100 : 0;
-  $("#habit-completion-rate").textContent = due.length ? Math.round(p) + "%" : "Unavailable";
+  $('#habit-completion-rate').setAttribute('aria-label',due.length ? Math.round(p)+'%' : 'Unavailable');
+  animateValues($('#habit-summary'),'habit-summary',{count:completed.length,total:due.length,percent:p},frame=>{
+    $('#habit-summary').textContent=Math.round(frame.count)+'/'+Math.round(frame.total);
+    $('#habit-summary-meter span').style.width=frame.percent+'%';
+    $('#habit-completion-rate').textContent=due.length ? Math.round(frame.percent)+'%' : 'Unavailable';
+  },{initial:{total:due.length}});
   $("#habit-completion-rate").dataset.state = due.length ? "ready" : "unavailable";
-  $("#habit-summary-meter span").style.width = p + "%";
   $("#habit-summary-meter").setAttribute("aria-valuenow", Math.round(p));
   $("#habit-summary-meter").removeAttribute("aria-valuetext");
-  $("#habit-streak").textContent = state.streak.status === "available" ? state.streak.count : "—";
+  if(state.streak.status === 'available'){
+    $('#habit-streak').setAttribute('aria-label',state.streak.count+' days');
+    animateValues($('#habit-streak'),'habit-streak',{count:state.streak.count},frame=>$('#habit-streak').textContent=Math.round(frame.count));
+  }else{cancelMetric('habit-streak');$('#habit-streak').textContent='—';$('#habit-streak').removeAttribute('aria-label');}
   $("#habit-streak").dataset.state = state.streak.status === "available" ? "ready" : "unavailable";
   $("#habit-streak-context").textContent =
     state.streak.status === "available"
@@ -490,8 +534,7 @@ function renderHabits() {
     cardWidth = innerWidth > 860 ? (width - 14) / 2 : width,
     weeks = Math.max(8, Math.min(20, Math.floor((cardWidth - 56) / 19))),
     cellSize = Math.max(10, Math.min(28, Math.floor((cardWidth - 56 - (weeks - 1) * 3) / weeks)));
-  $("#habit-list").replaceChildren(
-    ...items.map((h) => {
+  replaceList($("#habit-list"), items.map((h) => {
       const card = node("article", {
           class: "workspace-card habit-card",
           "data-color": habitAccent(h, state.categories),
@@ -508,8 +551,8 @@ function renderHabits() {
             "aria-pressed": !!h.completed,
             onclick: () => toggle(h, control),
           },
-          h.completed ? "✓" : h.target ? "+" : "○",
         );
+      const icon = habitIcon(h.icon);
       control.disabled = !h.due_today || !!h.archived_on;
       card.style.setProperty("--heat-cell", cellSize + "px");
       card.append(
@@ -520,7 +563,7 @@ function renderHabits() {
             node(
               "div",
               { class: "habit-title" },
-              habitIcon(h.icon),
+              icon,
               node(
                 "div",
                 {},
@@ -528,6 +571,7 @@ function renderHabits() {
                 h.description ? node("p", { class: "workspace-muted" }, h.description) : null,
               ),
             ),
+            node('span', { class: 'habit-state' }, h.completed ? 'Done' : h.due_today ? (h.target ? 'Record progress' : 'To do') : 'Rest day'),
             control,
           ),
           h.target
@@ -559,7 +603,7 @@ function renderHabits() {
         ].filter(Boolean),
       );
       return card;
-    }),
+    }), 'data-habit',
   );
   if (!items.length)
     $("#habit-list").append(
@@ -620,6 +664,10 @@ export async function loadHabits() {
     status("#habits-status", "");
   } catch (e) {
     if (token !== generation) return;
+    cancelMetric('habit-summary');cancelMetric('habit-streak');
+    state=null;
+    $('#habit-completion-rate').textContent='Unavailable';$('#habit-completion-rate').dataset.state='unavailable';$('#habit-completion-rate').setAttribute('aria-label','Unavailable');
+    $('#habit-summary').removeAttribute('aria-label');$('#habit-streak').removeAttribute('aria-label');
     $("#habit-list").replaceChildren();
     $("#habit-summary").textContent = "—";
     $("#habit-streak").textContent = "—";

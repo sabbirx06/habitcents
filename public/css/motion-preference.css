@@ -1,0 +1,6 @@
+/* The early preference controller owns this attribute, including on public pages. */
+:root[data-motion=off] *, :root[data-motion=off] *::before, :root[data-motion=off] *::after {
+  scroll-behavior:auto!important;
+  animation:none!important;
+  transition:none!important;
+}

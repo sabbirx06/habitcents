@@ -1,5 +1,14 @@
 <%- include("partials/head", { title: "Profile · HabitCents", css: ["/css/base.css"] }) %>
 <body>
  <%- include("partials/navbar") %>
- <main class="profile-page"><%- include('partials/page-header', {left: include('partials/header-identity', {user, fallback: 'Your account'}), right: '<a class="page-header-action" href="/logout">Log out</a>'}) %></main>
+ <main class="profile-page"><%- include('partials/page-header', {left: include('partials/header-identity', {user, fallback: 'Your account'}), right: '<a class="page-header-action" href="/logout">Log out</a>'}) %>
+  <section class="motion-setting" aria-labelledby="animations-label">
+   <div><h2 id="animations-label">Animations</h2>
+    <p id="animations-help">Enable app animations even when system animation effects are off.</p>
+    <p class="motion-scope">Your choice is saved in this browser on this device.</p>
+   </div>
+   <button id="animations" type="button" role="switch" aria-checked="false" aria-labelledby="animations-label" aria-describedby="animations-help"><span class="motion-switch-track" aria-hidden="true"></span><span class="motion-switch-state" aria-hidden="true">Off</span></button>
+  </section>
+ </main>
+ <script src="/js/profile.js" defer></script>
 </body></html>

@@ -11,10 +11,13 @@ import {
   status,
   notifyChange,
   bindWorkspaceRefresh,
-  moneyFigure,
   localDay,
   iconButton,
   modal,
+  optionalDateField,
+  animateValues,
+  cancelMetric,
+  replaceList,
 } from "./workspace.js";
 let goals = [],
   request = 0,
@@ -38,13 +41,14 @@ function editGoal(goal = {}) {
         step: ".01",
         max: 99999999.99,
       }),
-      field("Deadline (optional)", "deadline", "date", goal.deadline),
+      optionalDateField("Target date", "deadline", goal.deadline),
     ],
     async (values) => {
       await api("/api/goals/save", { ...values, goal_id: goal.goal_id });
       notifyChange();
       await loadSavings();
     },
+    { submit: goal.goal_id ? 'Save goal' : 'Create goal' },
   );
 }
 function contribute(goal) {
@@ -64,7 +68,7 @@ function contribute(goal) {
       notifyChange();
       await loadSavings();
     },
-    { submit: "Confirm contribution" },
+    { submit: "Add savings" },
   );
 }
 function goalVisualization(goal) {
@@ -101,15 +105,16 @@ function bindSegments(selector, current, change) {
 function render() {
   const filter = goalFilter,
     summary = summarizeGoals(goals);
-  $("#savings-total").textContent = `Tk ${new Intl.NumberFormat("en-BD", { maximumFractionDigits: 0 }).format(summary.totalCents / 100)}`;
+  const totalFormat = value => 'Tk '+new Intl.NumberFormat('en-BD',{maximumFractionDigits:0}).format(value);
+  $('#savings-total').setAttribute('aria-label',totalFormat(summary.totalCents/100));
+  animateValues($('#savings-total'),'savings-total',{value:summary.totalCents/100},frame=>$('#savings-total').textContent=totalFormat(frame.value));
   const items = goals.filter((g) =>
     filter === "archived"
       ? g.archived
       : !g.archived &&
         (filter !== "completed" || amountCents(g.saved_amount) >= amountCents(g.target_amount)),
   );
-  $("#goals-list").replaceChildren(
-    ...items.map((goal, index) => {
+  replaceList($("#goals-list"), items.map((goal, index) => {
       const complete = amountCents(goal.saved_amount) >= amountCents(goal.target_amount),
         card = node("article", { class: "workspace-card goal-card", "data-goal": goal.goal_id });
       card.dataset.color = ["blue", "pink", "lime"][index % 3];
@@ -132,7 +137,7 @@ function render() {
           "div",
           { class: "goal-details" },
           node("h2", {}, goal.name),
-          node("p", { class: "goal-amount" }, money(goal.saved_amount), " ",
+          node("p", { class: "goal-amount" }, node('span',{class:'goal-saved-amount'},money(goal.saved_amount)), " ",
             node("span", { class: "workspace-muted" }, "of " + money(goal.target_amount))),
         ),
         goalVisualization(goal),
@@ -162,8 +167,18 @@ function render() {
         ),
       );
       return card;
-    }),
+    }), 'data-goal',
   );
+  items.forEach(goal=>{
+    const card=$('#goals-list').querySelector('[data-goal="'+goal.goal_id+'"]'), saved=Number(goal.saved_amount),percent=Math.min(100,saved/Number(goal.target_amount)*100);
+    const savedNode=card.querySelector('.goal-saved-amount'),percentage=card.querySelector('.goal-linear strong'),fill=card.querySelector('.workspace-meter>span');
+    savedNode.setAttribute('aria-label',money(saved));
+    animateValues(card,'goal:'+goal.goal_id,{saved,percent},frame=>{
+      savedNode.textContent=money(frame.saved);
+      percentage.textContent=Math.round(frame.percent)+'%';
+      fill.style.width=frame.percent+'%';
+    });
+  });
   if (!items.length)
     $("#goals-list").append(
       node(
@@ -194,6 +209,8 @@ export async function loadSavings() {
     status("#savings-status", "");
   } catch (e) {
     if (token !== request) return;
+    cancelMetric('savings-total');goals.forEach(goal=>cancelMetric('goal:'+goal.goal_id));goals=[];
+    $('#savings-total').removeAttribute('aria-label');
     $("#savings-total").textContent = "—";
     $("#goals-list").replaceChildren();
     status("#savings-status", e.message, true);

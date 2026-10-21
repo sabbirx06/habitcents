@@ -108,6 +108,11 @@ test("scheduled quantitative habits set daily totals, synchronize dashboard, and
       body = await response.json();
     assert.equal(body.today, today);
     assert.equal(body.habits[0].due_today, true);
+    assert.equal(body.habits[0].icon, 'book');
+    assert.equal(body.habits[0].color, 'lavender');
+    assert.equal(Number(body.habits[0].target), 30);
+    assert.equal(body.habits[0].unit, 'minutes');
+    assert.deepEqual(body.habits[0].schedule_days, [1,2,3,4,5,6,7]);
     assert.equal(body.streak.count, 0);
     for (const total of ["10", "20"]) {
       assert.equal(
@@ -272,6 +277,7 @@ test("goal contributions are atomic positive amounts and archive/edit preserve b
       200,
     );
     let goal = (await (await get("/api/goals", cookie)).json()).goals[0];
+    assert.equal(goal.deadline, '2024-02-29');
     for (const amount of ["-1", "0", "0.001"])
       assert.equal(
         (await post("/api/goals/contribute", { goal_id: goal.goal_id, amount }, cookie)).status,

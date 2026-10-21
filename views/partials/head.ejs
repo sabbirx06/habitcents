@@ -7,9 +7,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <!-- Dynamic page title - defaults to "Habitcents" if not specified -->
     <title><%= title || 'Habitcents' %></title>
+    <script src="/js/motion-preference.js"></script>
+    <link rel="stylesheet" href="/css/motion-preference.css" />
 
     <link rel="preload" href="/fonts/NeueHaasGrotText-55Roman-Trial.otf" as="font" type="font/otf" crossorigin />
     <link rel="stylesheet" href="/css/fonts-authenticated.css" />
+    <script src="/js/motion.js" defer></script>
+    <script src="/js/habit-icons.js" defer></script>
     <script src="/js/navigation.js" defer></script>
 
     <!-- Bootstrap CSS framework for responsive design -->
@@ -25,7 +29,7 @@
       <% }); %>
     <% } %>
 
-    <% if (typeof css !== 'undefined' && css && css.includes('/css/base.css')) { %><link rel="stylesheet" href="/css/page-header.css" /><% } %>
+    <% if (typeof css !== 'undefined' && css && css.includes('/css/base.css')) { %><link rel="stylesheet" href="/css/page-header.css" /><link rel="stylesheet" href="/css/forms.css" /><link rel="stylesheet" href="/css/motion.css" /><% } %>
 
     <!-- Favicon for browser tab -->
     <link rel="icon" href="/media/favicon.svg" type="image/svg+xml" />

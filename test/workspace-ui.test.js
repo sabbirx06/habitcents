@@ -75,17 +75,17 @@ test("heatmaps align seven weekdays and keep unknown, scheduled, partial, rest a
   );
 });
 
-test("habit and expense controls retain filters with separate habit summaries", async () => {
+test("habit summaries retain direct actions and expenses retain transaction filters", async () => {
   const render = (page) =>
     ejs.renderFile("views/" + page + ".ejs", { page, user: { name: "Test" }, demo: true });
   const habits = await render("habits");
   assert.match(habits, /habit-progress-card/);
   assert.match(habits, /habit-streak-card/);
   assert.doesNotMatch(habits, /id="habit-presets"/);
-  assert.match(habits, /id="habit-new" class="workspace-button workspace-fab"/);
+  assert.match(habits, /id="habit-new" class="page-header-action habit-new-action"/);
   assert.doesNotMatch(habits, /workspace-streak/);
-  assert.match(habits, /id="habit-options"[^>]*aria-label="Filter and manage habits"/);
-  assert.match(habits, /id="habit-controls"[^>]*hidden/);
+  assert.doesNotMatch(habits, /id="habit-options"|id="habit-controls"|Manage categories/);
+  assert.match(habits, /habit-completion-card/);
   const expenses = await render("expenses");
   assert.match(
     expenses,
@@ -96,7 +96,7 @@ test("habit and expense controls retain filters with separate habit summaries", 
   assert.match(expenses, /expense-spent/);
   assert.match(expenses, /expense-recurring/);
   assert.match(expenses, /id="calendar-open"/);
-  assert.match(expenses, /id="expense-new" class="workspace-button workspace-fab"/);
+  assert.match(expenses, /id="expense-new" class="page-header-action header-primary-action"/);
 });
 
 test("savings uses a list without visualization options and shares the primary header action", async () => {
