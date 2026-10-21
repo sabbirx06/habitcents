@@ -28,10 +28,6 @@ body { --dock-clearance:calc(84px + env(safe-area-inset-bottom,0px));padding-bot
 .nav-dock:not([data-tooltips-dismissed]) .dock-link:is(:hover,:focus-visible) .dock-tooltip { visibility:visible;opacity:1; }
 @media(max-width:380px) { .nav-dock { gap:2px;padding:5px; }.dock-links { gap:0; }.dock-link { width:44px;height:44px; }.dock-separator { margin:0 2px; } }
 @media(prefers-reduced-motion:reduce) { .dock-link,.dock-tooltip { transition:none; } }
-.profile-page { width:min(600px,calc(100% - 2rem));margin:2rem auto;padding:1.5rem; }
-.profile-page h1 { font:400 2rem var(--font-display);margin:0 0 1.25rem; }
-.profile-name { font-size:1.3rem;overflow-wrap:anywhere; }
-.profile-logout { display:inline-flex;align-items:center;min-height:44px;margin-top:1rem;padding:.6rem 1.1rem;border-radius:999px;background:var(--ink);color:var(--surface);text-decoration:none; }
 .app-card{background:var(--surface);color:var(--ink);border:var(--border);border-radius:var(--radius-sm);box-shadow:0 3px 12px #22232005}
 body .btn-outline-light{color:var(--ink);border-color:var(--muted)}
 footer{margin-top:auto;background:transparent;color:var(--muted);font-size:.75rem;padding:1rem}
@@ -50,4 +46,21 @@ b,strong { font-weight:700; }
  #habit-list .card,#goals-list .card { flex-wrap:wrap; }
  #habit-list .card>div:first-child,#goals-list .flex-grow-1 { flex-basis:100%;min-width:0; }
  #habit-list .card span { white-space:normal;overflow-wrap:anywhere; }
+}
+
+/* Shared category icon tile for expense lists. */
+.transaction-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--category-color) 45%, var(--surface));
+}
+.transaction-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  fill: none;
 }

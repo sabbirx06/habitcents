@@ -1,0 +1,1 @@
+<div class="header-identity"><span class="initials-avatar" aria-hidden="true"><%= String(user.name || '').trim().split(/\s+/u).filter(Boolean).slice(0,2).map(part => Array.from(part)[0]).join('').toUpperCase() || '?' %></span><h1><%= String(user.name || '').trim() || fallback %></h1></div>

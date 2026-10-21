@@ -14,13 +14,15 @@ import {
   bindWorkspaceRefresh,
   moneyFigure,
   localDay,
-  bindPanel,
   iconButton,
   modal,
 } from "./workspace.js";
 let goals = [],
   request = 0,
-  initialized = false;
+  initialized = false,
+  goalFilter = "active",
+  goalView = "circular";
+try { goalView = localStorage.getItem("habitcents-goal-view") === "linear" ? "linear" : "circular"; } catch {}
 export function summarizeGoals(items) {
   const active = items.filter((g) => !g.archived);
   return {
@@ -68,8 +70,41 @@ function contribute(goal) {
     { submit: "Confirm contribution" },
   );
 }
+function goalVisualization(goal) {
+  const progress = ring(goal.saved_amount, goal.target_amount, goal.name);
+  if (goalView === 'linear') {
+    progress.className = 'goal-linear';
+    const percent = parseFloat(progress.querySelector('.arc').style.strokeDasharray);
+    progress.querySelector('svg').remove();
+    const track = node('span', {class:'workspace-meter', 'aria-hidden':'true'}, node('span'));
+    track.firstChild.style.width = percent + '%';
+    progress.append(track);
+  }
+  return progress;
+}
+function bindSegments(selector, current, change) {
+  const controls = [...$(selector).querySelectorAll('button')];
+  const select = value => {
+    change(value);
+    controls.forEach(control => control.setAttribute('aria-pressed', String(control.dataset.value === current())));
+    render();
+  };
+  controls.forEach((control,index) => {
+    control.setAttribute('aria-pressed', String(control.dataset.value === current()));
+    control.addEventListener('click', () => select(control.dataset.value));
+    control.addEventListener('keydown', event => {
+      let next;
+      if (event.key === 'ArrowRight') next = (index + 1) % controls.length;
+      if (event.key === 'ArrowLeft') next = (index + controls.length - 1) % controls.length;
+      if (event.key === 'Home') next = 0;
+      if (event.key === 'End') next = controls.length - 1;
+      if (next === undefined) return;
+      event.preventDefault(); controls[next].focus(); select(controls[next].dataset.value);
+    });
+  });
+}
 function render() {
-  const filter = $("#goals-filter").value,
+  const filter = goalFilter,
     summary = summarizeGoals(goals);
   $("#savings-total").replaceChildren(moneyFigure(summary.totalCents / 100));
   $("#savings-count").textContent =
@@ -123,7 +158,7 @@ function render() {
             ),
           ),
         ),
-        ring(goal.saved_amount, goal.target_amount, goal.name),
+        goalVisualization(goal),
         node(
           "div",
           { class: "goal-main" },
@@ -185,10 +220,13 @@ export async function loadSavings() {
 export function initSavings() {
   if (initialized) return;
   initialized = true;
-  bindPanel("#goal-options", "#goal-controls", "Your goals");
+  bindSegments("#goals-filter", () => goalFilter, value => { goalFilter = value; });
+  bindSegments("#goals-view", () => goalView, value => {
+    goalView = value;
+    try { localStorage.setItem("habitcents-goal-view", value); } catch {}
+  });
   bindWorkspaceRefresh(loadSavings, localDay);
   $("#goal-new").addEventListener("click", () => editGoal());
-  $("#goals-filter").addEventListener("change", render);
   $("#savings-retry").addEventListener("click", loadSavings);
   window.addEventListener("focus", () => {
     if (!document.querySelector(".workspace-dialog")) loadSavings();

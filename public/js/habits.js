@@ -32,6 +32,11 @@ export function heatmapDates(end, weeks) {
     start = shiftDay(last, -weeks * 7 + 1);
   return Array.from({ length: weeks * 7 }, (_, i) => shiftDay(start, i));
 }
+export function historyRangeLabel(today, weeks) {
+  const dates = heatmapDates(today, weeks);
+  return displayDate(dates[0], { day: 'numeric', month: 'short', year: 'numeric' }) +
+    ' – ' + displayDate(dates.at(-1), { day: 'numeric', month: 'short', year: 'numeric' });
+}
 export function habitCells({
   dates,
   today,
@@ -126,6 +131,19 @@ async function toggle(h, control) {
     control.disabled = false;
   }
 }
+// Honor saved category metadata when present, then the habit's saved palette.
+export function habitAccent(habit, categories = []) {
+  const palette = ['lime', 'blue', 'pink', 'lavender', 'peach'];
+  const saved = [habit.color, categories.find(category => category.name === habit.category)?.color]
+    .find(color => palette.includes(color));
+  if (saved) return saved;
+  // IDs may be PostgreSQL BIGINT strings: do not lose precision through Number.
+  const id = String(habit.habit_id ?? '');
+  if (/^\d+$/.test(id)) return palette[Number(BigInt(id) % BigInt(palette.length))];
+  const index = Array.from(id).reduce((value, character) =>
+    (value * 31 + character.codePointAt(0)) % palette.length, 0);
+  return palette[index];
+}
 function habitEditor(h = {}) {
   const name = field("Habit name", "name", "text", h.habit_name || h.name, {
       required: "",
@@ -158,7 +176,7 @@ function habitEditor(h = {}) {
         ["peach", "Peach"],
         ["pink", "Lavender pink"],
       ],
-      h.color || "lavender",
+      habitAccent(h, state?.categories),
     );
   const days = node(
       "fieldset",
@@ -198,6 +216,7 @@ function habitEditor(h = {}) {
   editor(
     h.habit_id ? "Edit habit" : "New habit",
     [
+      ...(!h.habit_id ? [state ? button("Choose a preset", presets, true) : node("p", {class:"workspace-muted full"}, "Presets are unavailable until habits load. You can still create a custom habit.")] : []),
       name,
       description,
       category,
@@ -441,7 +460,7 @@ function details(h, selected = state.today) {
     ),
   );
   box.classList.add("habit-card");
-  box.dataset.color = h.color || "lavender";
+  box.dataset.color = habitAccent(h, state?.categories);
   modal(h.habit_name, box);
 }
 function renderHabits() {
@@ -479,7 +498,7 @@ function renderHabits() {
     ...items.map((h) => {
       const card = node("article", {
           class: "workspace-card habit-card",
-          "data-color": h.color || "lavender",
+          "data-color": habitAccent(h, state.categories),
           "data-habit": h.habit_id,
         }),
         control = node(
@@ -680,7 +699,6 @@ export function initHabits() {
     ),
   );
   $("#habit-new").addEventListener("click", () => habitEditor());
-  $("#habit-presets").addEventListener("click", presets);
   $("#habit-categories").addEventListener("click", manageCategories);
   $("#habit-filter").addEventListener("change", renderHabits);
   $("#habit-category").addEventListener("change", renderHabits);

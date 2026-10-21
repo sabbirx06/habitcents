@@ -112,7 +112,7 @@ const base = "http://127.0.0.1:3001";
           await evaluate('document.querySelectorAll("main .history-inspection").length'),
           0,
         );
-        assert.equal(await evaluate('document.querySelectorAll(".habit-summary-card").length'), 1);
+        assert.equal(await evaluate('document.querySelectorAll(".habit-summaries > section").length'), 2);
         await evaluate('document.querySelector("main .heat-cell[data-state=completed]").focus()');
         const date = await evaluate("document.activeElement.dataset.date");
         await evaluate("document.activeElement.click()");
@@ -189,23 +189,13 @@ const base = "http://127.0.0.1:3001";
         await wait('!document.querySelector("dialog")');
         assert.ok(await evaluate('!!document.querySelector(".category-bar")'));
       } else {
-        await click("#goal-options");
-        await evaluate(
-          '{const filter=document.querySelector("#goals-filter");filter.value="completed";filter.dispatchEvent(new Event("change"))}',
-        );
-        await dialogButton("Done");
-        await wait('!document.querySelector("dialog")');
+        await click('#goals-filter [data-value="completed"]');
         assert.ok(
           await evaluate(
             '[...document.querySelectorAll(".goal-ring")].every(n=>n.getAttribute("aria-valuenow")==="100")',
           ),
         );
-        await click("#goal-options");
-        await evaluate(
-          '{const filter=document.querySelector("#goals-filter");filter.value="active";filter.dispatchEvent(new Event("change"))}',
-        );
-        await dialogButton("Done");
-        await wait('!document.querySelector("dialog")');
+        await click('#goals-filter [data-value="active"]');
       }
       await screenshot("refined-" + page + "-desktop");
       measurements.push(

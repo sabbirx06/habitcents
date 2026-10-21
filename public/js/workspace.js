@@ -160,7 +160,7 @@ export function modal(title, content, { onClose } = {}) {
       onClose?.();
       dialog.remove();
       if (activeDialog === dialog) activeDialog = null;
-      (opener?.isConnected ? opener : document.querySelector(".workspace-header button"))?.focus();
+      (opener?.isConnected ? opener : document.querySelector(".workspace-fab, .page-header button, .workspace-header button"))?.focus();
     };
   dialog.close = () => {
     if (disposed || closeTimer) return;

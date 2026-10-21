@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const source = fs.readFileSync('public/js/dashboard.js', 'utf8');
+const source = fs.readFileSync('public/js/dashboard.js','utf8').replace('./expense-icons.js', 'data:text/javascript;base64,'+Buffer.from(fs.readFileSync('public/js/expense-icons.js','utf8')).toString('base64'));
 const modulePromise = import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 class Element {
   constructor() { this.children=[]; this.style={setProperty(key,value){this[key]=value;}}; this.dataset={}; this.attributes={}; this.listeners={}; this.classList={toggle(){}}; this.parentElement=this; this.textContent=''; }
@@ -18,7 +18,7 @@ class Element {
 }
 function setup(responses,{withoutContinuity=false}={}) {
   const elements = new Map();
-  global.document = {querySelector: key => { if(withoutContinuity&&key.startsWith('#continuity'))return null; if(!elements.has(key)) elements.set(key,new Element()); return elements.get(key); },createElement:()=>new Element()};
+  global.document = {querySelector: key => { if(withoutContinuity&&key.startsWith('#continuity'))return null; if(!elements.has(key)) elements.set(key,new Element()); return elements.get(key); },createElement:()=>new Element(),createElementNS:()=>new Element()};
   global.fetch=async url=> {const data=responses[url]; if(data instanceof Error) throw data; return {ok:true,redirected:false,json:async()=>data};};
   return key=>document.querySelector(key);
 }
@@ -234,14 +234,28 @@ test('savings empty and failed responses have distinct honest states',async()=>{
  el=setup({...fixture,'/savings-data':new Error('offline')});await (await modulePromise).initDashboard();assert.equal(el('#savings-goal').hidden,true);assert.equal(el('#retry-savings').hidden,false);
 });
 
+test('dashboard goal dots match the goal count, select progress, and hide for a single goal',async()=>{
+ const goals=[{name:'One',saved_amount:25,target_amount:100},{name:'Two',saved_amount:50,target_amount:100},{name:'Three',saved_amount:75,target_amount:100}];
+ let el=setup({...fixture,'/savings-data':goals});await(await modulePromise).initDashboard();
+ const dots=el('#savings-selector').children;
+ assert.equal(dots.length,3);assert.equal(el('#savings-selector').hidden,false);
+ dots[2].listeners.click();
+ assert.equal(el('#savings-goal-name').textContent,'Three');assert.equal(el('#savings-percentage').textContent,'75%');
+ assert.deepEqual(dots.map(dot=>dot.attributes['aria-pressed']),['false','false','true']);
+ el=setup({...fixture,'/savings-data':goals.slice(0,1)});await(await modulePromise).initDashboard();
+ assert.equal(el('#savings-selector').hidden,true);assert.equal(el('#savings-goal-name').textContent,'One');
+});
+
 test('savings selector changes the linked ring and distinguishes unavailable targets',async()=>{
  const el=setup({...fixture,'/savings-data':[{name:'Travel',saved_amount:'25',target_amount:'100'},{name:'Emergency',saved_amount:'30',target_amount:'0'}]});
  await (await modulePromise).initDashboard();
  assert.equal(el('#savings-selector').hidden,false);assert.equal(el('#savings-selector').children.length,2);
+ assert.equal(el('#savings-selector').children[0].attributes['aria-pressed'],'true');
+ assert.equal(el('#savings-selector').children[1].attributes['aria-label'],'Show Emergency');
  assert.equal(el('#savings-percentage').textContent,'25%');assert.equal(el('#savings-arc').style.strokeDasharray,'25 100');
  assert.equal(el('#savings-goal-name').textContent,'Travel');
  assert.match(el('#savings-link').attributes['aria-label'],/Travel.*current progress 25%/);
- el('#savings-selector').listeners.change({target:{value:'1'}});
+ el('#savings-selector').children[1].listeners.click();
  assert.equal(el('#savings-percentage').textContent,'—');assert.equal(el('#savings-progress').attributes['aria-valuenow'],undefined);
  assert.equal(el('#savings-goal-name').textContent,'Emergency');
  assert.match(el('#savings-status').textContent,/unavailable/);
@@ -321,6 +335,32 @@ test('daily spending and continuity render real records and category labels inde
  assert.match(el('#spending-table').textContent,/Tk 12.35/);assert.equal(el('#continuity-grid').children.length,182);
  assert.equal(el('#continuity-grid').children.filter(c=>c.dataset.state==='completed').length,1);assert.equal(el('#continuity-grid').children.filter(c=>c.dataset.state==='future').length,3);
  assert.equal(el('#recent-expenses').children[0].dataset.category,'uncategorized');assert.match(el('#recent-expenses').textContent,/Uncategorized/);
+});
+
+test('recent expenses reuse decorative SVG category tiles and retain full copy, amounts and neutral fallbacks',async()=>{
+ const categories=['transport','food','subscriptions','shopping','uncategorized','unknown','toString'];
+ const description='A very long description with household essentials and groceries '.repeat(3);
+ const expenses=categories.map((category,i)=>({description:i===0?description:category,date:'2026-01-01',amount:99999999.99,category}));
+ const el=setup({...fixture,'/get-expenses':expenses});
+ await(await modulePromise).initDashboard({now:new Date(2026,0,1)});
+ const rows=el('#recent-expenses').children;
+ assert.equal(rows.length,7);
+ const paths=[];
+ rows.forEach((row,i)=>{
+  const [tile,info,amount]=row.children;
+  assert.equal(tile.className,'transaction-icon');
+  assert.equal(tile.attributes['aria-hidden'],'true');
+  assert.equal(tile.children[0].attributes.focusable,'false');
+  paths.push(tile.children[0].children[0].attributes.d);
+  assert.equal(info.children[0].textContent,expenses[i].description);
+  assert.equal(info.children[0].title,expenses[i].description);
+  assert.equal(info.children[1].textContent,'Jan 1, 2026');
+  assert.match(amount.textContent,/99,999,999\.99/);
+ });
+ assert.equal(new Set(paths.slice(0,5)).size,5);
+ assert.equal(paths[5],paths[4]);assert.equal(paths[6],paths[4]);
+ assert.equal(rows[5].dataset.category,'uncategorized');
+ assert.equal(rows[6].dataset.category,'uncategorized');
 });
 test('rapid habit selection cannot replace the latest continuity with stale data',async()=>{
  const el=setup({...fixture,'/get-habits':[{habit_id:1,habit_name:'One'},{habit_id:2,habit_name:'Two'}],'/dashboard-continuity?habitId=1&end=2026-01-01':continuityFixture()});

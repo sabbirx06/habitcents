@@ -6,9 +6,7 @@
 }
 .demo-notice { display:flex; gap:.75rem; margin:0 0 .65rem; color:var(--muted); font-size:.75rem; }
 .demo-notice > span { border-left:var(--border); padding-left:.75rem; }
-.dashboard-heading { display:flex; align-items:center; justify-content:space-between; gap:2rem; margin-bottom:1.2rem; }
 .heading-date { font:400 .8rem var(--font-mono); color:var(--muted); margin:0 0 .25rem; }
-.dashboard-heading h1 { font-family:var(--font-display); font-size:clamp(1.7rem,2.6vw,2.3rem); font-weight:400; letter-spacing:-.05em; margin:0; overflow-wrap:anywhere; }
 .greeting-mark { color:#8b8b7a; }
 .week-calendar { width:315px; flex-shrink:0; }
 .week-calendar>p { font:400 .75rem var(--font-mono); margin:0 0 .4rem; }
@@ -82,7 +80,6 @@
 .inline-status[data-state=success] { color:#34533e; }
 @media (min-width:1001px) and (max-height:800px) {
  .dashboard-shell { padding-top:.8rem; padding-bottom:1rem; }
- .dashboard-heading { margin-bottom:.8rem; }
  .panel { padding:1.05rem 1.2rem; }
  .budget-figures { margin:.35rem 0 .85rem; }
 }
@@ -92,8 +89,6 @@
 }
 @media (max-width:760px) {
  .dashboard-shell { padding:1rem 0 1.5rem; }
- .dashboard-heading { align-items:stretch; flex-direction:column; gap:1.1rem; margin-bottom:1rem; }
- .dashboard-heading h1 { font-size:1.9rem; }
  .week-calendar { width:100%; max-width:430px; }
  .week-strip { gap:9px; }
  .week-day strong { max-width:44px; width:100%; margin:auto; }
@@ -125,7 +120,6 @@
 .week-day.today strong { font-weight:700; }
 .primary-action, .expense-form label { font-weight:500; }
 /* Height-aware hierarchy: increase information size rather than stretching cards. */
-.dashboard-heading h1 { letter-spacing:-.01em; }
 @media (min-width:1101px) {
  .budget-number { font-size:clamp(56px,min(5.55vw,9.5vh),80px); }
  .completion-number>span:first-child { font-size:clamp(56px,min(5.55vw,9.5vh),80px); }

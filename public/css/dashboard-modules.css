@@ -51,8 +51,7 @@
 .savings-link #savings-goal-name { font-size:1.05rem;min-width:0;overflow-wrap:anywhere; }
 .savings-ring { width:108px;flex:0 0 108px; }
 .savings-ring svg { stroke-width:8; }
-#savings-percentage { font-size:clamp(26px,2.2vw,32px); }
-#savings-selector { max-width:100%;width:100%;background:#ffffffc9;border-color:#71340055;font-size:.85rem;min-height:32px;margin:0; }
+#savings-percentage { font-size:20px; }
 /* Small cells use a longer bounded range; cards fill their assigned grid areas. */
 .dashboard-workspace .continuity-panel { --cell:9px;--cell-gap:2px;box-sizing:border-box;max-width:none;width:100%;padding:.4rem .75rem; }
 .continuity-topline { display:flex;align-items:center;gap:.5rem;flex-wrap:wrap; }
@@ -185,3 +184,24 @@
  .habit-row-content { min-height:44px; }
  .activity-panel .expense-row[data-category] { min-height:40px;padding-top:.2rem;padding-bottom:.2rem; }
 }
+
+/* Recent expense details share a compact row with the existing category icon. */
+.activity-panel .expense-row[data-category] { display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:center;gap:.5rem; }
+.activity-panel .transaction-icon { width:32px;height:32px;border-radius:9px; }
+.activity-panel .transaction-icon svg { width:18px;height:18px; }
+.activity-panel .recent-expense-info { min-width:0; }
+.activity-panel .expense-description { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.activity-panel .expense-amount { grid-column:3;grid-row:1;max-width:none;white-space:nowrap; }
+
+/* Small goal selectors sit below the current name and progress ring. */
+.dashboard-workspace .savings-panel { padding:.5rem .75rem; }
+.savings-panel #savings-goal { min-width:0;gap:.15rem; }
+.savings-panel .savings-link { width:100%;min-width:0;gap:.2rem; }
+.savings-link #savings-goal-name { display:block;width:100%;font-size:.95rem;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.savings-panel .savings-ring { width:84px;flex-basis:84px; }
+.savings-dots { display:flex;justify-content:center;flex-wrap:wrap;gap:0;max-width:100%;margin-top:6px; }
+.savings-dot { display:grid;place-items:center;width:24px;min-height:24px;padding:0;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer; }
+.savings-dot::before { content:"";width:6px;height:6px;border:1px solid currentColor;border-radius:50%;background:transparent; }
+.savings-dot[aria-pressed="true"]::before { background:currentColor; }
+.savings-dot:hover::before { box-shadow:0 0 0 2px #211a1226; }
+.savings-dot:focus-visible { outline:2px solid currentColor;outline-offset:-2px; }

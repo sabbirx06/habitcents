@@ -1077,21 +1077,6 @@
   grid-column: span 2;
   background: var(--habit-peach);
 }
-.expense-add-fab {
-  position: fixed;
-  z-index: 45;
-  right: calc(24px + env(safe-area-inset-right, 0px));
-  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-  min-height: 48px;
-  box-shadow: 0 5px 20px #22232026;
-}
-@media (max-width: 760px) {
-  .expense-add-fab {
-    right: calc(16px + env(safe-area-inset-right, 0px));
-    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
-  }
-  .workspace-page[data-page="expenses"] { padding-bottom: 72px; }
-}
 .expense-trend {
   grid-column: span 3;
   min-width: 0;
@@ -1146,21 +1131,6 @@
   grid-template-columns: 38px minmax(0, 1fr);
   align-items: center;
   gap: 0.6rem;
-}
-.transaction-icon {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--category-color) 45%, var(--surface));
-}
-.transaction-icon svg {
-  width: 20px;
-  height: 20px;
-  stroke: var(--ink);
-  stroke-width: 1.5;
-  fill: none;
 }
 .transaction .transaction-title {
   font-size: 0.95rem;
@@ -1318,14 +1288,6 @@
   }
 }
 @media (max-width: 420px) {
-  #habit-new {
-    width: 44px;
-    padding: 0;
-    border-radius: 10px;
-  }
-  #habit-new .habit-new-label {
-    display: none;
-  }
   [data-page="habits"] .workspace-header > div:first-child {
     min-width: 0;
   }
@@ -1414,3 +1376,72 @@
   .goal-card .goal-amount { font-size: 1.15rem; }
   .transaction .transaction-amount { font-size: 0.95rem; }
 }
+/* Focused workspace refinements: shared fixed actions reserve their own clearance. */
+.workspace-page[data-page="expenses"] { padding-bottom:88px; }
+.workspace-page .workspace-fab {
+ position:fixed;z-index:45;right:max(16px,calc((100vw - 1320px)/2));
+ bottom:calc(96px + env(safe-area-inset-bottom,0px));min-height:48px;
+ border-radius:999px;padding:.65rem 1rem;box-shadow:0 5px 20px #22232026;
+ max-width:calc(100vw - 32px - env(safe-area-inset-right,0px));
+ margin-right:env(safe-area-inset-right,0px);
+}
+.workspace-page #habit-new.workspace-fab { width:auto;min-width:48px;padding:.65rem 1rem;border-radius:999px; }
+.workspace-fab > span:first-child { font-size:1.4rem;line-height:1; }
+.habit-summaries { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:14px; }
+.habit-summaries h2 { margin:0;font-size:1.1rem; }
+.habit-summaries .workspace-number { font-size:2.65rem;margin:.35rem 0; }
+.habit-summaries .workspace-number small { font-size:1rem; }
+.habit-summaries .workspace-muted { margin:0 0 .65rem; }
+.habit-streak-card { background:var(--habit-lime); }
+.habit-card { --habit-tone:#e8e6dc;--habit-accent:#aaa99c; }
+.habit-card[data-color="lavender"] { --habit-accent:#b5a0bd;--habit-tone:var(--habit-lavender,#e0cfe0); }
+.habit-card[data-color="blue"] { --habit-tone:var(--habit-blue,#c5d4e7); }
+.habit-card[data-color="lime"] { --habit-tone:var(--habit-lime,#d6df9c); }
+.habit-card[data-color="peach"] { --habit-tone:var(--habit-peach,#ead4c3); }
+.habit-card[data-color="pink"] { --habit-tone:var(--habit-pink,#e5cde2); }
+.header-expense-actions { display:flex;align-items:center;justify-content:flex-end;gap:.5rem;flex-wrap:wrap; }
+.expense-workspace > .expense-budget { grid-column:span 2; }
+.expense-workspace > .expense-spent { grid-column:span 2; }
+.expense-workspace > .expense-recurring { grid-column:span 2;background:var(--habit-lavender);min-width:0; }
+.expense-recurring > h2 { font-size:1.2rem;margin:0 0 .5rem; }
+.expense-recurring .recurring-row { display:block; }
+.expense-recurring .recurring-actions { margin-top:.5rem; }
+.expense-recurring #recurring-list { max-height:240px;overflow:auto;scrollbar-gutter:stable; }
+.savings-controls { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.6rem;margin:.75rem 0; }
+.segmented-control { display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;border:1px solid var(--line);border-radius:999px;background:var(--surface);max-width:100%; }
+.segmented-control button { min-height:44px;padding:.45rem .8rem;border:0;border-radius:999px;background:transparent;color:var(--ink);font:inherit;cursor:pointer; }
+.segmented-control button[aria-pressed="true"] { background:var(--ink);color:var(--surface); }
+.goals-overview { flex-wrap:wrap;gap:.3rem 1rem; }
+.goal-linear { display:flex;flex-direction:column;justify-content:center;gap:.65rem;margin:1rem 0;min-height:90px; }
+.goal-linear strong { font-size:2rem;font-weight:500; }
+.goal-linear .workspace-meter { display:block;width:100%; }
+.goal-linear .workspace-meter > span { display:block;height:100%; }
+@media(max-width:860px) {
+ .expense-workspace > .expense-recurring { grid-column:1/-1; }
+ .expense-workspace > .expense-budget,.expense-workspace > .expense-spent { grid-column:span 3; }
+}
+@media(max-width:650px) {
+ .expense-workspace > .expense-budget,.expense-workspace > .expense-spent { grid-column:span 1; }
+ .header-expense-actions { justify-content:flex-start; }
+ .habit-summaries { gap:10px; }
+ .habit-summaries .workspace-number { font-size:2.25rem; }
+ .habit-summaries h2 { font-size:1rem; }
+ .segmented-control button { padding:.4rem .65rem;font-size:.85rem; }
+}
+@media(max-width:380px) { .habit-summaries { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:560px) {
+ .expense-workspace > .expense-budget,.expense-workspace > .expense-spent { grid-column:1/-1; }
+}
+/* Saved or ID-derived habit accents keep all completion affordances consistent. */
+.habit-card .habit-complete[aria-pressed="true"] {
+ background:var(--habit-tone);border-color:var(--habit-accent);color:var(--ink);
+}
+/* Only the summary cards lose vertical space; column widths and lower rows stay intact. */
+.expense-workspace > :is(.expense-budget,.expense-spent,.expense-recurring) {
+ height:auto;min-height:0;padding-block:.65rem;align-self:stretch;
+}
+.expense-recurring > .workspace-topline { margin-bottom:.35rem; }
+.expense-recurring > .workspace-topline h2 { margin:0;font-size:1.2rem; }
+.expense-recurring > .workspace-muted,.expense-recurring > .workspace-status { margin:.35rem 0;overflow-wrap:anywhere; }
+.expense-recurring .recurring-row { padding:.4rem 0; }
+.expense-recurring .recurring-actions { margin-top:.35rem; }

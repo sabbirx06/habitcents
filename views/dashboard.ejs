@@ -3,11 +3,7 @@
  <%- include("partials/navbar") %>
  <main class="dashboard-shell">
   <% if (typeof demo !== 'undefined' && demo) { %><p class="demo-notice">Demo preview <span>Sample data · changes stay in memory</span></p><% } %>
-  <header class="dashboard-heading time-header">
-   <div class="header-identity"><span class="initials-avatar" aria-hidden="true"><%= String(user.name || '').trim().split(/\s+/u).filter(Boolean).slice(0,2).map(part => Array.from(part)[0]).join('').toUpperCase() || '?' %></span><h1><%= user.name || 'Your dashboard' %></h1></div>
-   <time id="live-clock" class="live-clock" aria-label="Current local time">—</time>
-   <div class="header-date"><div><span id="header-weekday"></span><span id="header-month"></span></div><button id="browse-dates" class="header-date-button" type="button" aria-label="Browse dates" aria-expanded="false" aria-controls="date-browser" aria-haspopup="dialog"><span id="header-day" class="header-day">—</span></button></div>
-  </header>
+  <%- include('partials/page-header', {headerClass: 'dashboard-heading time-header', left: include('partials/header-identity', {user, fallback: 'Your dashboard'}), center: '<time id="live-clock" class="live-clock" aria-label="Current local time">—</time>', right: include('partials/header-dashboard-date')}) %>
   <section class="week-calendar" aria-label="Week date navigation"><button id="previous-week" class="week-control" type="button" aria-label="Previous week">←</button><ol id="week-strip" class="week-strip"></ol><button id="next-week" class="week-control" type="button" aria-label="Next week">→</button><button id="week-today" class="week-control" type="button">Today</button></section>
   <div id="history-context" class="history-context" hidden><div><h2 id="selected-date-label" tabindex="-1"></h2><p>Date browsing is read-only. Return to today to make changes.</p></div><button id="back-to-today" type="button">Back to today</button></div>
   <div class="dashboard-feedback"><p id="dashboard-status" role="status"></p><button id="retry-dashboard" type="button" hidden>Try again ↻</button></div>
@@ -33,7 +29,6 @@
 
 <div class="dashboard-summary-savings"><article class="panel savings-panel" aria-label="Current savings progress">
    <div id="savings-goal" hidden>
-    <select id="savings-selector" aria-label="Select savings goal" hidden></select>
     <a id="savings-link" class="savings-link" href="/savings" title="Current savings progress, including when browsing past dates">
      <span id="savings-goal-name"></span>
      <span id="savings-progress" class="savings-ring" role="progressbar" aria-label="Current savings goal progress" aria-valuemin="0" aria-valuemax="100">
@@ -41,6 +36,7 @@
       <span id="savings-percentage">—</span>
      </span>
     </a>
+    <div id="savings-selector" class="savings-dots" role="group" aria-label="Choose savings goal" hidden></div>
    </div>
    <p id="savings-status" class="inline-status" role="status">Loading savings…</p><button id="retry-savings" type="button" hidden>Retry</button>
    <a id="savings-empty-link" class="text-link" href="/savings" hidden>View Savings</a>

@@ -46,7 +46,7 @@ test('all migrated routes execute PostgreSQL SQL and preserve frontend contracts
     assert.equal((await get('/get-habits')).status, 302);
     assert.equal((await get('/dashboard', cookie)).status, 200);
     assert.equal((await get('/profile')).status,302);
-    const profile=await get('/profile',cookie);assert.equal(profile.status,200);const html=await profile.text();assert.match(html,/class="profile-name">Owner</);assert.match(html,/href="\/logout"/);
+    const profile=await get('/profile',cookie);assert.equal(profile.status,200);const html=await profile.text();assert.match(html,/<h1>Owner<\/h1>/);assert.match(html,/href="\/logout"/);
     assert.equal((html.match(/aria-current="page"/g)||[]).length,1);assert.match(html,/aria-current="page"[^>]*href="\/profile"/);
     await post('/add-habit', { name: "Walk ' safely", difficulty: '5', category: 'physical' }, cookie);
     const habits = await (await get('/get-habits', cookie)).json();

@@ -4,12 +4,13 @@ const test = require("node:test"),
   ejs = require("ejs");
 const uri = (source) => "data:text/javascript;base64," + Buffer.from(source).toString("base64");
 const shared = uri(fs.readFileSync("public/js/workspace.js", "utf8")),
-  dashboard = uri(fs.readFileSync("public/js/dashboard.js", "utf8"));
+  dashboard = uri(fs.readFileSync('public/js/dashboard.js','utf8').replace('./expense-icons.js', 'data:text/javascript;base64,'+Buffer.from(fs.readFileSync('public/js/expense-icons.js','utf8')).toString('base64')));
 const load = (name) =>
   import(
     uri(
       fs
         .readFileSync("public/js/" + name + ".js", "utf8")
+        .replace('./expense-icons.js', uri(fs.readFileSync('public/js/expense-icons.js','utf8')))
         .replace(/(['"])\.\/workspace\.js\1/g, () => JSON.stringify(shared))
         .replace(/(['"])\.\/dashboard\.js\1/g, () => JSON.stringify(dashboard)),
     )
@@ -74,11 +75,14 @@ test("heatmaps align seven weekdays and keep unknown, scheduled, partial, rest a
   );
 });
 
-test("workspace filters remain available behind named dialog triggers and Habits has one combined summary", async () => {
+test("workspace controls retain filters with separate habit summaries and segmented savings choices", async () => {
   const render = (page) =>
     ejs.renderFile("views/" + page + ".ejs", { page, user: { name: "Test" }, demo: true });
   const habits = await render("habits");
-  assert.match(habits, /habit-summary-card/);
+  assert.match(habits, /habit-progress-card/);
+  assert.match(habits, /habit-streak-card/);
+  assert.doesNotMatch(habits, /id="habit-presets"/);
+  assert.match(habits, /id="habit-new" class="workspace-button workspace-fab"/);
   assert.doesNotMatch(habits, /workspace-streak/);
   assert.match(habits, /id="habit-options"[^>]*aria-label="Filter and manage habits"/);
   assert.match(habits, /id="habit-controls"[^>]*hidden/);
@@ -90,9 +94,13 @@ test("workspace filters remain available behind named dialog triggers and Habits
   assert.match(expenses, /id="transaction-controls"[^>]*hidden/);
   assert.match(expenses, /id="category-controls"[^>]*hidden/);
   assert.match(expenses, /expense-spent/);
+  assert.match(expenses, /expense-recurring/);
+  assert.match(expenses, /id="calendar-open"/);
+  assert.match(expenses, /id="expense-new" class="workspace-button workspace-fab"/);
   const savings = await render("savings");
-  assert.match(savings, /id="goal-options"[^>]*aria-label="Filter and manage goals"/);
-  assert.match(savings, /id="goal-controls"[^>]*hidden/);
+  assert.match(savings, /id="goals-filter" class="segmented-control"/);
+  assert.match(savings, /id="goals-view" class="segmented-control"/);
+  assert.doesNotMatch(savings, /id="goal-options"|<select/);
   assert.doesNotMatch(savings, /workspace-card lime/);
 });
 test("expense aggregation reconciles precise daily and category totals without inferring categories", async () => {
@@ -121,4 +129,16 @@ test("savings summary excludes archived balances and preserves completed goals u
   );
   assert.deepEqual(summarizeGoals([]), { totalCents: 0, count: 0 });
   assert.throws(() => summarizeGoals([{ saved_amount: "unavailable", archived: false }]));
+});
+
+test('habit accents preserve saved custom colors and vary missing colors by stable ID',async()=>{
+ const {habitAccent}=await load('habits');
+ for(const color of ['lavender','blue','lime','peach','pink']) assert.equal(habitAccent({color}),color);
+ const existing=Array.from({length:6},(_,i)=>({habit_id:String(101+i),habit_name:'[Demo] Existing '+i,color:i===0?'invalid':null}));
+ assert.equal(new Set(existing.map(habit=>habitAccent(habit))).size,5);
+ assert.deepEqual([...existing].reverse().map(habit=>habitAccent(habit)).reverse(),existing.map(habit=>habitAccent(habit)));
+ assert.equal(habitAccent({habit_id:101}),habitAccent({habit_id:'101'}));
+ assert.equal(habitAccent({habit_id:'9007199254740993'}),'lavender');
+ assert.equal(habitAccent({category:'Movement',color:'lavender'},[{name:'Movement',color:'blue'}]),'lavender');
+ assert.equal(habitAccent({category:'Movement'},[{name:'Movement',color:'blue'}]),'blue');
 });

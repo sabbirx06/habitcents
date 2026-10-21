@@ -1,5 +1,5 @@
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');
-const mod=()=>import('data:text/javascript;base64,'+Buffer.from(fs.readFileSync('public/js/dashboard.js','utf8')).toString('base64'));
+const mod=()=>import('data:text/javascript;base64,'+Buffer.from(fs.readFileSync('public/js/dashboard.js','utf8').replace('./expense-icons.js', 'data:text/javascript;base64,'+Buffer.from(fs.readFileSync('public/js/expense-icons.js','utf8')).toString('base64'))).toString('base64'));
 
 test('daily spending fills elapsed unrecorded dates and validates exact totals across leap/year boundaries',async()=>{
  const {buildDailySpending}=await mod();

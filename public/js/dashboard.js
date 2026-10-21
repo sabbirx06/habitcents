@@ -1,3 +1,4 @@
+import { categoryIcon } from "./expense-icons.js";
 const decimal = new Intl.NumberFormat("en-BD", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
@@ -356,9 +357,11 @@ function renderRecentExpenses(expenses) {
         : "";
       amount.className = "expense-amount";
       amount.textContent = currency.format(Number(expense.amount) || 0);
+      info.className = "recent-expense-info";
+      description.title = expense.description || "Expense";
       info.append(description, date);
       appendExpenseCategory(info, expense);
-      item.append(info, amount);
+      item.append(categoryIcon(expense.category), info, amount);
       return item;
     }),
   );
@@ -742,7 +745,11 @@ function renderSavingsGoal(index) {
   if (!goal) return;
   const progress = goal.progress,
     available = Number.isFinite(progress);
+  [...$("#savings-selector").children].forEach((dot, dotIndex) => {
+    dot.setAttribute("aria-pressed", String(dotIndex === index));
+  });
   text("#savings-goal-name", goal.name);
+  $("#savings-goal-name").title = goal.name;
   text("#savings-percentage", available ? Math.round(progress) + "%" : "—");
   $("#savings-arc").style.strokeDasharray = available
     ? progress + " 100"
@@ -780,14 +787,28 @@ async function loadSavings() {
     const selector = $("#savings-selector");
     selector.replaceChildren();
     savingsGoals.forEach((goal, index) => {
-      const option = document.createElement("option");
-      option.value = String(index);
-      option.textContent = goal.name;
-      selector.append(option);
+      const dot = document.createElement("button");
+      dot.type = "button";
+      dot.className = "savings-dot";
+      dot.setAttribute("aria-label", "Show " + goal.name);
+      dot.setAttribute("aria-pressed", "false");
+      dot.title = goal.name;
+      dot.addEventListener("click", () => renderSavingsGoal(index));
+      dot.addEventListener("keydown", event => {
+        let next;
+        if (event.key === "ArrowRight") next = (index + 1) % savingsGoals.length;
+        if (event.key === "ArrowLeft") next = (index + savingsGoals.length - 1) % savingsGoals.length;
+        if (event.key === "Home") next = 0;
+        if (event.key === "End") next = savingsGoals.length - 1;
+        if (next === undefined) return;
+        event.preventDefault();
+        selector.children[next].focus();
+        renderSavingsGoal(next);
+      });
+      selector.append(dot);
     });
     selector.hidden = savingsGoals.length < 2;
     const selected = Math.max(0, savingsGoals.indexOf(summary.goal));
-    selector.value = String(selected);
     $("#savings-goal").hidden = !summary.goal;
     if (summary.goal) renderSavingsGoal(selected);
     else status("#savings-status", "No savings goals yet.", true);
@@ -1468,9 +1489,6 @@ function bindDateBrowser() {
       next.focus();
     }
   });
-  $("#savings-selector")?.addEventListener("change", (event) =>
-    renderSavingsGoal(Number(event.target.value)),
-  );
   $("#retry-savings")?.addEventListener("click", () => loadSavings());
   for (const section of ["habits", "expenses"])
     $("#retry-history-" + section)?.addEventListener("click", () =>

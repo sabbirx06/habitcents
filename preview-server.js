@@ -48,7 +48,7 @@ function createPreviewApp() {
     const match=(req.headers.cookie || '').match(/preview-scenario=(\w+)/);
     req.scenario=match?.[1] || 'populated';
     res.locals.demo=true;
-    if(['/dashboard','/habits','/expenses','/savings'].includes(req.path)) {
+    if(['/dashboard','/habits','/expenses','/savings','/profile'].includes(req.path)) {
       req.scenario=['empty','failure','summaryFailure','legacySummary','small','populated','noBudget','long','large','many','longName','emptyName','historyFailure','savingsFailure','completedGoals','breakdownFailure','continuityFailure','emptyHistory','partialContinuityFailure','streakFailure','streakSetup'].includes(req.query.scenario)?req.query.scenario:'populated';
       res.cookie('preview-scenario',req.scenario,{sameSite:'lax'});
     }
@@ -167,7 +167,7 @@ function createPreviewApp() {
   require('./lib/preview-workspaces').registerPreviewWorkspaces(app,{habits,expenses,goals:savingsGoals,history:demoHistory,today:sampleDay,shift:shiftDemoDay,getBudget:()=>budget,setBudget:value=>budget=value,presets:{physical:[{name:'Walking 10,000 Steps'},{name:'Going to the gym'},{name:'Playing football'}],spiritual:[{name:'Meditation'},{name:'Prayer'},{name:'Gratitude Journal'}],healthy:[{name:'Drinking Water'},{name:'Sleep Early',displayName:'Going to sleep early'},{name:'Eating Healthy'}]}});
   app.get(['/habits','/expenses','/savings','/profile'],(req,res)=>{
     const page=req.path.slice(1);
-    res.render(page,{title:page+' · Demo',page,user:{name:'Demo User'},demo:true});
+    res.render(page,{title:page+' · Demo',page,user:{name:req.scenario==='longName'?'Alexandria Catherine Montgomery Sullivan Whitaker':req.scenario==='emptyName'?'':'Demo User'},demo:true});
   });
   // Other account mutations are intentionally unavailable in this database-free preview.
   app.post(/.*/,(_req,res)=>res.status(405).send('Demo preview: this action is available in the authenticated app.'));

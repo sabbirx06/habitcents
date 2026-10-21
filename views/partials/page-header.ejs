@@ -1,0 +1,5 @@
+<header class="page-header<%= typeof headerClass !== 'undefined' ? ' ' + headerClass : '' %>">
+ <div class="page-header-left"><% if (typeof heading !== 'undefined') { %><h1><%= heading %></h1><% } else { %><%- typeof left !== 'undefined' ? left : '' %><% } %></div>
+ <div class="page-header-center"><%- typeof center !== 'undefined' ? center : '' %></div>
+ <div class="page-header-right"><%- typeof right !== 'undefined' ? right : '' %></div>
+</header>

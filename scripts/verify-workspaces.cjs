@@ -278,7 +278,7 @@ const base = "http://127.0.0.1:3001";
     await submit();
     await wait('document.querySelectorAll(".goal-card").length===2');
     await evaluate(
-      'document.querySelector("#goals-filter").value="archived";document.querySelector("#goals-filter").dispatchEvent(new Event("change"))',
+      `document.querySelector('#goals-filter [data-value="archived"]').click()`,
     );
     assert.ok(
       await evaluate('document.querySelector("#goals-list").textContent.includes("12.35")'),

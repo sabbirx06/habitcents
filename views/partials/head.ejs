@@ -25,6 +25,8 @@
       <% }); %>
     <% } %>
 
+    <% if (typeof css !== 'undefined' && css && css.includes('/css/base.css')) { %><link rel="stylesheet" href="/css/page-header.css" /><% } %>
+
     <!-- Favicon for browser tab -->
     <link rel="icon" href="/media/favicon.svg" type="image/svg+xml" />
   </head>
