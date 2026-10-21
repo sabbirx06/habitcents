@@ -75,7 +75,7 @@ test("heatmaps align seven weekdays and keep unknown, scheduled, partial, rest a
   );
 });
 
-test("workspace controls retain filters with separate habit summaries and segmented savings choices", async () => {
+test("habit and expense controls retain filters with separate habit summaries", async () => {
   const render = (page) =>
     ejs.renderFile("views/" + page + ".ejs", { page, user: { name: "Test" }, demo: true });
   const habits = await render("habits");
@@ -97,9 +97,14 @@ test("workspace controls retain filters with separate habit summaries and segmen
   assert.match(expenses, /expense-recurring/);
   assert.match(expenses, /id="calendar-open"/);
   assert.match(expenses, /id="expense-new" class="workspace-button workspace-fab"/);
-  const savings = await render("savings");
+});
+
+test("savings uses a list without visualization options and shares the primary header action", async () => {
+  const savings = await ejs.renderFile("views/savings.ejs", { page: "savings", user: { name: "Test" }, demo: true });
   assert.match(savings, /id="goals-filter" class="segmented-control"/);
-  assert.match(savings, /id="goals-view" class="segmented-control"/);
+  assert.doesNotMatch(savings, /id="goals-view"|Circular|Goal visualization/);
+  assert.match(savings, /id="goals-list" class="savings-list"/);
+  assert.match(savings, /id="goal-new" class="page-header-action header-primary-action"/);
   assert.doesNotMatch(savings, /id="goal-options"|<select/);
   assert.doesNotMatch(savings, /workspace-card lime/);
 });

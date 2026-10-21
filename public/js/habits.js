@@ -482,14 +482,7 @@ function renderHabits() {
       : state.streak.reason === "timezone-review-required"
         ? "Streak tracking needs a timezone review before it can continue."
         : "Start tracking from today without changing earlier records.";
-  const filter = $("#habit-filter").value,
-    category = $("#habit-category").value,
-    items = state.habits.filter(
-      (h) =>
-        (filter === "archived" ? !!h.archived_on : !h.archived_on) &&
-        (filter !== "due" || h.due_today) &&
-        (category === "all" || h.category === category),
-    );
+  const items = state.habits.filter((h) => !h.archived_on);
   const width = $("#habit-list").clientWidth,
     cardWidth = innerWidth > 860 ? (width - 14) / 2 : width,
     weeks = Math.max(8, Math.min(20, Math.floor((cardWidth - 56) / 19))),
@@ -658,14 +651,6 @@ export async function loadHabits() {
     if (token !== generation) return;
     if (!Array.isArray(result.habits) || !result.today) throw Error("Invalid habits response.");
     state = result;
-    const selected = $("#habit-category").value;
-    $("#habit-category").replaceChildren(
-      node("option", { value: "all" }, "All categories"),
-      ...state.categories.map((c) => node("option", { value: c.name }, c.name)),
-    );
-    $("#habit-category").value = [...$("#habit-category").options].some((o) => o.value === selected)
-      ? selected
-      : "all";
     renderHabits();
     status("#habits-status", "");
   } catch (e) {
@@ -685,7 +670,6 @@ export async function loadHabits() {
 export function initHabits() {
   if (initialized) return;
   initialized = true;
-  bindPanel("#habit-options", "#habit-controls", "Filter and manage habits");
   bindWorkspaceRefresh(loadHabits, localDay);
   $("#streak-start").addEventListener("click", () =>
     confirmAction(
@@ -700,8 +684,6 @@ export function initHabits() {
   );
   $("#habit-new").addEventListener("click", () => habitEditor());
   $("#habit-categories").addEventListener("click", manageCategories);
-  $("#habit-filter").addEventListener("change", renderHabits);
-  $("#habit-category").addEventListener("change", renderHabits);
   $("#habits-retry").addEventListener("click", loadHabits);
   window.addEventListener("resize", () => {
     clearTimeout(resizeTimer);

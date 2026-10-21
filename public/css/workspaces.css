@@ -1421,6 +1421,104 @@
 .goal-linear strong { font-size:2rem;font-weight:500; }
 .goal-linear .workspace-meter { display:block;width:100%; }
 .goal-linear .workspace-meter > span { display:block;height:100%; }
+/* Savings goals stay in one list, with contributions aligned to the right. */
+.workspace-page[data-page="savings"] #goals-list {
+ display:grid;
+ grid-template-columns:minmax(0,1fr);
+ gap:8px;
+}
+.workspace-page[data-page="savings"] .savings-controls {
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:.75rem;
+}
+.workspace-page[data-page="savings"] .savings-total-card {
+ display:flex;
+ align-items:baseline;
+ justify-content:space-between;
+ gap:1rem;
+ min-width:min(280px,100%);
+ min-height:54px;
+ margin-left:auto;
+ padding:.55rem .85rem;
+ background:#d5dfd0;
+ border-radius:999px;
+}
+.workspace-page[data-page="savings"] .savings-total-card .workspace-muted {
+ margin:0;
+ font-size:.8rem;
+}
+.workspace-page[data-page="savings"] .savings-total-card strong {
+ font-size:1.3rem;
+ font-weight:600;
+}
+.workspace-page[data-page="savings"] .goal-card {
+ display:grid;
+ grid-template-columns:minmax(0,1fr) 44px auto;
+ grid-template-areas:"details manage action" "progress progress action";
+ align-items:center;
+ padding:.65rem .85rem;
+ border-radius:20px;
+ gap:.35rem .8rem;
+}
+.workspace-page[data-page="savings"] .goal-details {
+ grid-area:details;
+ min-width:0;
+ display:flex;
+ align-items:baseline;
+ justify-content:space-between;
+ flex-wrap:wrap;
+ gap:.35rem 1rem;
+}
+.workspace-page[data-page="savings"] .goal-details h2 {
+ min-width:0;
+ overflow-wrap:anywhere;
+ font:500 1.05rem/1.2 var(--font-text);
+ letter-spacing:normal;
+}
+.workspace-page[data-page="savings"] .goal-linear > strong {
+ font:400 clamp(32px,2.8vw,42px)/1.1 var(--font-display);
+ letter-spacing:-.035em;
+ font-variant-numeric:tabular-nums;
+}
+.workspace-page[data-page="savings"] .goal-linear {
+ grid-area:progress;
+ min-width:0;
+ margin:0;
+ min-height:0;
+ gap:.35rem;
+}
+.workspace-page[data-page="savings"] .goal-linear .workspace-meter {
+ height:6px;
+ margin:0;
+ border-radius:99px;
+ background:#22232020;
+}
+.workspace-page[data-page="savings"] .goal-linear .workspace-meter > span {
+ background:var(--ink);
+ border-radius:inherit;
+}
+.workspace-page[data-page="savings"] .goal-card .goal-amount {
+ margin:0;
+ overflow-wrap:anywhere;
+ font:500 1rem/1.3 var(--font-text);
+}
+.workspace-page[data-page="savings"] .goal-amount .workspace-muted { font-weight:400; }
+.workspace-page[data-page="savings"] .goal-card > .workspace-icon-button { grid-area:manage; }
+.workspace-page[data-page="savings"] .goal-actions { grid-area:action;justify-self:end;align-self:end; }
+.workspace-page[data-page="savings"] .goal-actions button { white-space:nowrap; }
+@media(max-width:760px) {
+ .workspace-page[data-page="savings"] .savings-controls { align-items:stretch;flex-direction:column; }
+ .workspace-page[data-page="savings"] .savings-total-card { width:100%;min-width:0; }
+ .workspace-page[data-page="savings"] .goal-card {
+  grid-template-columns:minmax(0,1fr) 32px auto;
+  grid-template-areas:"details details manage" "progress progress action";
+  gap:.8rem;
+ }
+ .workspace-page[data-page="savings"] .goal-card > .workspace-icon-button { justify-self:end; }
+ .workspace-page[data-page="savings"] .goal-actions button { padding-inline:.65rem;font-size:.85rem; }
+}
 @media(max-width:860px) {
  .expense-workspace > .expense-recurring { grid-column:1/-1; }
  .expense-workspace > .expense-budget,.expense-workspace > .expense-spent { grid-column:span 3; }

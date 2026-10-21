@@ -8,7 +8,6 @@ import {
   field,
   editor,
   confirmAction,
-  ring,
   status,
   notifyChange,
   bindWorkspaceRefresh,
@@ -20,9 +19,7 @@ import {
 let goals = [],
   request = 0,
   initialized = false,
-  goalFilter = "active",
-  goalView = "circular";
-try { goalView = localStorage.getItem("habitcents-goal-view") === "linear" ? "linear" : "circular"; } catch {}
+  goalFilter = "active";
 export function summarizeGoals(items) {
   const active = items.filter((g) => !g.archived);
   return {
@@ -71,16 +68,14 @@ function contribute(goal) {
   );
 }
 function goalVisualization(goal) {
-  const progress = ring(goal.saved_amount, goal.target_amount, goal.name);
-  if (goalView === 'linear') {
-    progress.className = 'goal-linear';
-    const percent = parseFloat(progress.querySelector('.arc').style.strokeDasharray);
-    progress.querySelector('svg').remove();
-    const track = node('span', {class:'workspace-meter', 'aria-hidden':'true'}, node('span'));
-    track.firstChild.style.width = percent + '%';
-    progress.append(track);
-  }
-  return progress;
+  const percent = Math.min(100, Math.max(0, amountCents(goal.saved_amount) / amountCents(goal.target_amount) * 100));
+  const track = node('span', {class:'workspace-meter', 'aria-hidden':'true'}, node('span'));
+  track.firstChild.style.width = percent + '%';
+  return node('div', {
+    class:'goal-linear', role:'progressbar',
+    'aria-label':goal.name + ' savings progress',
+    'aria-valuemin':0, 'aria-valuemax':100, 'aria-valuenow':Math.round(percent),
+  }, node('strong', {}, Math.round(percent) + '%'), track);
 }
 function bindSegments(selector, current, change) {
   const controls = [...$(selector).querySelectorAll('button')];
@@ -106,10 +101,7 @@ function bindSegments(selector, current, change) {
 function render() {
   const filter = goalFilter,
     summary = summarizeGoals(goals);
-  $("#savings-total").replaceChildren(moneyFigure(summary.totalCents / 100));
-  $("#savings-count").textContent =
-    summary.count + " active goal" + (summary.count === 1 ? "" : "s");
-  $("#savings-count").title = "Completed goals remain active until archived";
+  $("#savings-total").textContent = `Tk ${new Intl.NumberFormat("en-BD", { maximumFractionDigits: 0 }).format(summary.totalCents / 100)}`;
   const items = goals.filter((g) =>
     filter === "archived"
       ? g.archived
@@ -138,8 +130,12 @@ function render() {
       card.append(
         node(
           "div",
-          { class: "workspace-topline" },
+          { class: "goal-details" },
           node("h2", {}, goal.name),
+          node("p", { class: "goal-amount" }, money(goal.saved_amount), " ",
+            node("span", { class: "workspace-muted" }, "of " + money(goal.target_amount))),
+        ),
+        goalVisualization(goal),
           iconButton("Manage " + goal.name, () =>
             modal(
               goal.name,
@@ -156,22 +152,10 @@ function render() {
                 archive,
               ),
             ),
-          ),
-        ),
-        goalVisualization(goal),
-        node(
-          "div",
-          { class: "goal-main" },
-          node(
-            "div",
-            {},
-            node("p", { class: "goal-amount" }, money(goal.saved_amount)),
-            node("p", { class: "workspace-muted" }, "of " + money(goal.target_amount)),
-          ),
         ),
         node(
           "div",
-          { class: "recurring-actions" },
+          { class: "goal-actions" },
           !goal.archived
             ? button("+ Add savings", () => contribute(goal))
             : button("Restore goal", () => archive.click(), true),
@@ -211,7 +195,6 @@ export async function loadSavings() {
   } catch (e) {
     if (token !== request) return;
     $("#savings-total").textContent = "—";
-    $("#savings-count").textContent = "";
     $("#goals-list").replaceChildren();
     status("#savings-status", e.message, true);
     $("#savings-retry").hidden = false;
@@ -221,10 +204,6 @@ export function initSavings() {
   if (initialized) return;
   initialized = true;
   bindSegments("#goals-filter", () => goalFilter, value => { goalFilter = value; });
-  bindSegments("#goals-view", () => goalView, value => {
-    goalView = value;
-    try { localStorage.setItem("habitcents-goal-view", value); } catch {}
-  });
   bindWorkspaceRefresh(loadSavings, localDay);
   $("#goal-new").addEventListener("click", () => editGoal());
   $("#savings-retry").addEventListener("click", loadSavings);
