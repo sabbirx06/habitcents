@@ -224,7 +224,7 @@
 .dashboard-workspace[data-mode=history] .historical-expenses { grid-area:expenses; }
 .dashboard-workspace[data-mode=history] .universal-streak-panel { grid-area:streak; }
 .dashboard-workspace[data-mode=history] .savings-panel { grid-area:savings;aspect-ratio:auto;align-self:stretch; }
-.dashboard-workspace[data-mode=history] .completion-panel { grid-area:completion;background:var(--lilac); }
+.dashboard-workspace[data-mode=history] .completion-panel { grid-area:completion;background:var(--blue); }
 .dashboard-workspace[data-mode=history] .spending-panel { grid-area:spending; }
 .dashboard-workspace[data-mode=history] .historical-progress { background:var(--lilac); }
 .dashboard-workspace[data-mode=history] .completion-percentage { font:400 clamp(36px,4vw,60px)/1.1 var(--font-display);margin:.6rem 0;letter-spacing:-.035em; }

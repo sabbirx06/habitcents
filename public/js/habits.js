@@ -472,10 +472,16 @@ function renderHabits() {
   $("#habit-summary").textContent = completed.length + "/" + due.length;
   $("#habit-summary-context").textContent = due.length - completed.length + " remaining today";
   const p = due.length ? (completed.length / due.length) * 100 : 0;
+  $("#habit-completion-rate").textContent = due.length ? Math.round(p) + "%" : "Unavailable";
+  $("#habit-completion-rate").dataset.state = due.length ? "ready" : "unavailable";
+  $("#habit-completion-context").textContent = due.length
+    ? completed.length + " of " + due.length + " habits completed today"
+    : "No habits due today.";
   $("#habit-summary-meter span").style.width = p + "%";
   $("#habit-summary-meter").setAttribute("aria-valuenow", Math.round(p));
   $("#habit-summary-meter").removeAttribute("aria-valuetext");
   $("#habit-streak").textContent = state.streak.status === "available" ? state.streak.count : "—";
+  $("#habit-streak").dataset.state = state.streak.status === "available" ? "ready" : "unavailable";
   $("#habit-streak-context").textContent =
     state.streak.status === "available"
       ? "Complete every habit scheduled today to earn one day."
