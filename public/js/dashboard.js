@@ -756,6 +756,7 @@ function renderSavingsGoal(index) {
     : "0 100";
   $("#savings-arc").style.opacity = available && progress > 0 ? "1" : "0";
   const ring = $("#savings-progress");
+  ring.style.setProperty("--savings-fill", `${available ? progress : 0}%`);
   if (available)
     ring.setAttribute("aria-valuenow", String(Math.round(progress)));
   else ring.removeAttribute("aria-valuenow");
@@ -833,6 +834,7 @@ function updateMode() {
   $("#dashboard-workspace").dataset.mode = view.mode;
   $("#dashboard-workspace").hidden = false;
   $("#history-context").hidden = !history;
+  if (history) text("#history-completed", "—");
   $("#browse-dates").setAttribute("aria-expanded", String(view.browser));
   for (const node of document.querySelectorAll?.(
     "#today-habits input,.expense-form input,.expense-form select,.expense-form button",
@@ -888,6 +890,7 @@ async function loadHistory(section) {
       "…",
   );
   list.replaceChildren();
+  if (section === "habits") text("#history-completed", "—");
   if (section === "expenses") text("#history-spent", "—");
   try {
     const data = await read(
@@ -897,6 +900,7 @@ async function loadHistory(section) {
     if (data.date !== date) throw new Error("Date mismatch");
     const items = section === "habits" ? data.completions : data.expenses;
     if (!Array.isArray(items)) throw new Error("Invalid history");
+    if (section === "habits") text("#history-completed", items.length);
     if (section === "expenses") {
       if (
         data.spent === null ||

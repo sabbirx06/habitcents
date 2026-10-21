@@ -42,6 +42,22 @@ test('failed loads settle with visible recoverable errors',async()=>{
  assert.match(el('#recent-expenses').children[0].textContent,/could not|unable/i);
  assert.match(el('#dashboard-status').textContent,/retry|try again/i);
 });
+
+test('history completion counts leave today progress unchanged and restore on return',async()=>{
+ const el=setup({...fixture,'/dashboard-history?date=2025-12-31&section=habits':{date:'2025-12-31',completions:[{habit_name:'Read'}]},'/dashboard-history?date=2025-12-31&section=expenses':{date:'2025-12-31',spent:'0.00',expenses:[]}});
+ await(await modulePromise).initDashboard({now:new Date(2026,0,1)});
+ assert.equal(el('#habit-progress').textContent,'0/1');
+ const note=el('#habit-progress-note').textContent;
+ const day=el('#week-strip').children.find(item=>item.children[0].dataset.date==='2025-12-31').children[0];
+ await el('#week-strip').listeners.click({target:day});
+ assert.equal(el('#history-completed').textContent,'1');
+ assert.equal(el('#habit-progress').textContent,'0/1');
+ assert.equal(el('#habit-progress-bar').attributes['aria-valuenow'],0);
+ assert.equal(el('#habit-progress-note').textContent,note);
+ await el('#back-to-today').listeners.click();
+ assert.equal(el('#habit-progress').textContent,'0/1');
+ assert.equal(el('#habit-progress-bar').attributes['aria-valuenow'],0);
+});
 test('failed check-in rolls back and enables retry; successful uncheck persists',async()=>{
  const el=setup(fixture); await (await modulePromise).initDashboard();
  const box=el('#today-habits').children[0].children[0].children[0];box.checked=true;

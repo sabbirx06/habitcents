@@ -205,3 +205,52 @@
 .savings-dot[aria-pressed="true"]::before { background:currentColor; }
 .savings-dot:hover::before { box-shadow:0 0 0 2px #211a1226; }
 .savings-dot:focus-visible { outline:2px solid currentColor;outline-offset:-2px; }
+
+/* Fixed card positions for historical and future dates only. */
+.dashboard-workspace[data-mode=history] {
+ flex:0;
+ grid-template-columns:repeat(4,minmax(0,1fr));
+ grid-template-areas:"progress habits recorded expenses" "streak habits savings expenses" "completion spending spending spending";
+ grid-template-rows:minmax(164px,auto) minmax(164px,auto) minmax(220px,auto);
+ align-content:start;
+}
+.dashboard-workspace[data-mode=history] .dashboard-lower,
+.dashboard-workspace[data-mode=history] .dashboard-habit-group,
+.dashboard-workspace[data-mode=history] .dashboard-entry-group,
+.dashboard-workspace[data-mode=history] .history-view { display:contents; }
+.dashboard-workspace[data-mode=history] .historical-progress { grid-area:progress;align-self:stretch; }
+.dashboard-workspace[data-mode=history] .historical-habits { grid-area:habits; }
+.dashboard-workspace[data-mode=history] .historical-summary { grid-area:recorded;align-self:stretch; }
+.dashboard-workspace[data-mode=history] .historical-expenses { grid-area:expenses; }
+.dashboard-workspace[data-mode=history] .universal-streak-panel { grid-area:streak; }
+.dashboard-workspace[data-mode=history] .savings-panel { grid-area:savings;aspect-ratio:auto;align-self:stretch; }
+.dashboard-workspace[data-mode=history] .completion-panel { grid-area:completion;background:var(--lilac); }
+.dashboard-workspace[data-mode=history] .spending-panel { grid-area:spending; }
+.dashboard-workspace[data-mode=history] .historical-progress { background:var(--lilac); }
+.dashboard-workspace[data-mode=history] .completion-percentage { font:400 clamp(36px,4vw,60px)/1.1 var(--font-display);margin:.6rem 0;letter-spacing:-.035em; }
+.dashboard-workspace[data-mode=history] .completion-percentage[data-state=unavailable] { font-size:1.5rem; }
+@media(max-width:1100px) {
+ .dashboard-workspace[data-mode=history] {
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-areas:"progress recorded" "streak savings" "habits expenses" "completion spending";
+  grid-template-rows:repeat(2,minmax(164px,auto)) minmax(240px,auto) minmax(220px,auto);
+ }
+}
+@media(max-width:760px) {
+ .dashboard-workspace[data-mode=history] {
+  grid-template-columns:minmax(0,1fr);
+  grid-template-areas:"progress" "streak" "habits" "recorded" "savings" "expenses" "completion" "spending";
+  grid-template-rows:none;
+  grid-auto-rows:auto;
+ }
+ .dashboard-workspace[data-mode=history] .panel { min-height:140px; }
+ .dashboard-workspace[data-mode=history] .spending-panel { min-height:240px; }
+}
+
+/* Browsed dates use a horizontal savings meter; today retains its ring. */
+.dashboard-workspace[data-mode=history] .savings-panel #savings-goal { justify-items:stretch;text-align:left;gap:.65rem; }
+.dashboard-workspace[data-mode=history] .savings-link { align-items:stretch;gap:.5rem;text-align:left; }
+.dashboard-workspace[data-mode=history] .savings-ring { display:flex;flex-direction:column;align-items:stretch;gap:.65rem;width:100%;aspect-ratio:auto;flex-basis:auto; }
+.dashboard-workspace[data-mode=history] .savings-ring svg { display:none; }
+.dashboard-workspace[data-mode=history] #savings-percentage { font:400 clamp(36px,4vw,60px)/1.1 var(--font-display);letter-spacing:-.035em; }
+.dashboard-workspace[data-mode=history] .savings-ring::after { content:"";height:6px;border-radius:99px;background:linear-gradient(to right,var(--ink) var(--savings-fill,0%),#22232020 var(--savings-fill,0%)); }

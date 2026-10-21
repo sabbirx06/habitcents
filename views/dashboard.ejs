@@ -49,9 +49,14 @@
     <a class="text-link card-bottom" href="/habits">View all habits <span id="habits-more" class="compact-detail">↗</span></a>
    </article><article class="panel universal-streak-panel" aria-label="Universal day streak"><h2>Streak</h2><p id="streak-asof" class="module-context" hidden></p><p class="streak-figure"><span id="universal-streak">—</span><span>days</span></p><p id="streak-status" class="inline-status" role="status">Loading streak…</p><button id="retry-streak" class="module-retry" type="button" hidden>Retry</button></article></div>
 <section id="history-view" class="history-view" aria-label="Selected-day recorded activity" hidden>
+   <article class="panel historical-progress"><h2>Completed habits</h2><p class="completion-number"><span id="history-completed">—</span><span class="completion-caption">recorded completions</span></p></article>
    <article class="panel historical-summary"><h2>Recorded spending</h2><p id="history-spent" class="budget-number">—</p><p>For the selected day · not a historical budget balance</p></article>
-   <article class="panel"><h2>Recorded habit completions</h2><ul id="history-habits" class="history-list"></ul><p id="history-habits-status" class="inline-status" role="status"></p><button id="retry-history-habits" type="button" hidden>Retry completions</button></article>
+   <article class="panel historical-habits"><h2>Recorded habit completions</h2><ul id="history-habits" class="history-list"></ul><p id="history-habits-status" class="inline-status" role="status"></p><button id="retry-history-habits" type="button" hidden>Retry completions</button></article>
    <article class="panel historical-expenses"><h2>Recorded expenses</h2><ul id="history-expenses" class="expense-list"></ul><p id="history-expenses-status" class="inline-status" role="status"></p><button id="retry-history-expenses" type="button" hidden>Retry expenses</button></article>
+   <article class="panel completion-panel" aria-label="Habit completion percentage">
+    <h2>Habit completion percentage</h2><p id="habit-percentage" class="completion-percentage" data-state="unavailable">Unavailable</p>
+    <p class="muted-copy">The total habits due on this date was not recorded.</p>
+   </article>
   </section>
 <article data-today-only class="panel activity-panel">
     <div class="panel-topline"><h2>Recent expenses</h2><span class="panel-symbol" aria-hidden="true">↗</span></div>
