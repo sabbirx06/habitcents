@@ -1325,8 +1325,12 @@
 .habit-summary-card .workspace-number small { font: 700 0.65em var(--font-text); }
 .expense-budget .workspace-number { font-size: clamp(2.6rem, 4.2vw, 3.75rem); }
 .expense-spent .workspace-number { font-size: clamp(2.25rem, 3.5vw, 3.15rem); }
-.expense-budget #budget-edit { color: #fff; background: var(--ink); border: 1px solid var(--ink); border-radius: 999px; padding: 0.45rem 0.85rem; font-weight: 500; text-decoration: none; transition: background-color 180ms ease; }
-.expense-budget #budget-edit:hover { background: #45483f; }
+.expense-workspace #budget-edit,
+.expense-workspace #calendar-open,
+.expense-workspace #recurring-new { color:#fff;background:var(--ink);border:1px solid var(--ink);border-radius:999px;padding:.45rem .85rem;font-weight:500;text-decoration:none;transition:background-color 180ms ease; }
+.expense-workspace #budget-edit:hover,
+.expense-workspace #calendar-open:hover,
+.expense-workspace #recurring-new:hover { background:#45483f; }
 .expense-budget > .workspace-topline { margin-bottom: 0; }
 .expense-budget .workspace-topline h2 { flex: 1; }
 .expense-workspace { align-items: start; }

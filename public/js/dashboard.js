@@ -240,7 +240,7 @@ async function loadOverview() {
   if (hasBudget) money("#dashboard-budget", remaining);
   else text("#dashboard-budget", "Not set");
   money("#budget-spent", budget - remaining);
-  if (hasBudget) money("#budget-total", budget, "of ");
+  if (hasBudget) money("#budget-total", budget);
   else text("#budget-total", "No monthly budget");
   text(
     "#budget-percentage",

@@ -1,5 +1,5 @@
 /* Summary group and three lower regions share deliberate outer grid boundaries. */
-.dashboard-workspace { --bento-gap:10px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.35fr) 164px;grid-template-areas:"progress budget savings" "lower lower lower";gap:var(--bento-gap);align-items:stretch; }
+.dashboard-workspace { --bento-gap:10px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.1fr) minmax(240px,1fr);grid-template-areas:"progress budget savings" "lower lower lower";gap:var(--bento-gap);align-items:stretch; }
 .dashboard-workspace .panel { order:0;min-width:0;min-height:0;padding:.5rem .85rem;border-radius:20px; }
 .dashboard-workspace .progress-panel { grid-area:progress; }
 .dashboard-workspace .budget-panel { grid-area:budget; }
@@ -247,7 +247,15 @@
  .dashboard-workspace[data-mode=history] .spending-panel { min-height:240px; }
 }
 
-/* Browsed dates use a horizontal savings meter; today retains its ring. */
+/* Today and browsed dates share the linear savings card. */
+.dashboard-workspace[data-mode=today] .savings-panel { aspect-ratio:auto;align-self:stretch;justify-content:flex-start; }
+.dashboard-workspace[data-mode=today] .savings-panel #savings-goal { justify-items:stretch;text-align:left;gap:.65rem; }
+.dashboard-workspace[data-mode=today] .savings-link { align-items:stretch;gap:.5rem;text-align:left; }
+.dashboard-workspace[data-mode=today] .savings-ring { display:flex;flex-direction:column;align-items:stretch;gap:.65rem;width:100%;aspect-ratio:auto;flex-basis:auto; }
+.dashboard-workspace[data-mode=today] .savings-ring svg { display:none; }
+.dashboard-workspace[data-mode=today] #savings-percentage { font:400 clamp(36px,4vw,60px)/1.1 var(--font-display);letter-spacing:-.035em; }
+.dashboard-workspace[data-mode=today] .savings-ring::after { content:"";height:6px;border-radius:99px;background:linear-gradient(to right,var(--ink) var(--savings-fill,0%),#22232020 var(--savings-fill,0%)); }
+/* Browsed dates use the same horizontal savings meter. */
 .dashboard-workspace[data-mode=history] .savings-panel #savings-goal { justify-items:stretch;text-align:left;gap:.65rem; }
 .dashboard-workspace[data-mode=history] .savings-link { align-items:stretch;gap:.5rem;text-align:left; }
 .dashboard-workspace[data-mode=history] .savings-ring { display:flex;flex-direction:column;align-items:stretch;gap:.65rem;width:100%;aspect-ratio:auto;flex-basis:auto; }

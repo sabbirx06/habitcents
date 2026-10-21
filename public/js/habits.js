@@ -474,9 +474,6 @@ function renderHabits() {
   const p = due.length ? (completed.length / due.length) * 100 : 0;
   $("#habit-completion-rate").textContent = due.length ? Math.round(p) + "%" : "Unavailable";
   $("#habit-completion-rate").dataset.state = due.length ? "ready" : "unavailable";
-  $("#habit-completion-context").textContent = due.length
-    ? completed.length + " of " + due.length + " habits completed today"
-    : "No habits due today.";
   $("#habit-summary-meter span").style.width = p + "%";
   $("#habit-summary-meter").setAttribute("aria-valuenow", Math.round(p));
   $("#habit-summary-meter").removeAttribute("aria-valuetext");
@@ -484,7 +481,7 @@ function renderHabits() {
   $("#habit-streak").dataset.state = state.streak.status === "available" ? "ready" : "unavailable";
   $("#habit-streak-context").textContent =
     state.streak.status === "available"
-      ? "Complete every habit scheduled today to earn one day."
+      ? ""
       : state.streak.reason === "timezone-review-required"
         ? "Streak tracking needs a timezone review before it can continue."
         : "Start tracking from today without changing earlier records.";
@@ -638,6 +635,20 @@ export async function loadHabits() {
 export function initHabits() {
   if (initialized) return;
   initialized = true;
+  const streakInfoButton = $("#habit-streak-info-button"),
+    streakInfoText = $("#habit-streak-info-text");
+  const showStreakInfo = () => { streakInfoText.hidden = false; };
+  const hideStreakInfo = () => { streakInfoText.hidden = true; };
+  streakInfoButton.addEventListener("focus", showStreakInfo);
+  streakInfoButton.addEventListener("blur", hideStreakInfo);
+  streakInfoButton.addEventListener("click", showStreakInfo);
+  streakInfoButton.parentElement.addEventListener("mouseenter", showStreakInfo);
+  streakInfoButton.parentElement.addEventListener("mouseleave", () => {
+    if (document.activeElement !== streakInfoButton) hideStreakInfo();
+  });
+  streakInfoButton.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") { hideStreakInfo(); event.stopPropagation(); }
+  });
   bindWorkspaceRefresh(loadHabits, localDay);
   $("#streak-start").addEventListener("click", () =>
     confirmAction(
