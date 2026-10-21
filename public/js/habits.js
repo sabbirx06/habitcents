@@ -604,44 +604,6 @@ function presets() {
   }
   modal("Explore presets", box);
 }
-function manageCategories() {
-  if (!state) return;
-  const content = node("div");
-  for (const c of state.categories)
-    content.append(
-      node(
-        "div",
-        { class: "recurring-row" },
-        node("span", {}, c.name),
-        button(
-          "Remove",
-          () =>
-            confirmAction(
-              "Remove category",
-              "Habits will become uncategorized; check-ins stay unchanged.",
-              async () => {
-                await api("/api/habit-categories/delete", { category_id: c.category_id });
-                await loadHabits();
-              },
-            ),
-          true,
-        ),
-      ),
-    );
-  content.append(
-    button("+ New category", () =>
-      editor(
-        "New category",
-        [field("Category name", "name", "text", "", { required: "", maxlength: 50 })],
-        async (values) => {
-          await api("/api/habit-categories", values);
-          await loadHabits();
-        },
-      ),
-    ),
-  );
-  modal("Habit categories", content);
-}
 export async function loadHabits() {
   const token = ++generation;
   status("#habits-status", "Loading habits…");
@@ -683,7 +645,6 @@ export function initHabits() {
     ),
   );
   $("#habit-new").addEventListener("click", () => habitEditor());
-  $("#habit-categories").addEventListener("click", manageCategories);
   $("#habits-retry").addEventListener("click", loadHabits);
   window.addEventListener("resize", () => {
     clearTimeout(resizeTimer);
