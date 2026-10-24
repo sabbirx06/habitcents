@@ -74,11 +74,11 @@ function isoDate(date) {
 }
 export function getWeekDays(currentDate) {
   const today = localDate(currentDate);
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  const start = new Date(today), weekStart = globalThis.HabitCentsPreferences?.get().week || 'monday';
+  start.setDate(today.getDate() - (weekStart === 'sunday' ? today.getDay() : (today.getDay() + 6) % 7));
   return Array.from({ length: 7 }, (_, index) => {
-    const day = new Date(monday);
-    day.setDate(monday.getDate() + index);
+    const day = new Date(start);
+    day.setDate(start.getDate() + index);
     return {
       iso: isoDate(day),
       date: day.getDate(),
@@ -213,6 +213,12 @@ async function loadOverview() {
     );
   if (!isTodayResponse(token)) return;
   text("#budget-status", "");
+  const quotaList=$('#period-quotas'),quotaSection=$('#period-quotas-section');
+  if(quotaList&&quotaSection){
+    const quotas=Array.isArray(data.quotas)?data.quotas:[];quotaSection.hidden=!quotas.length;
+    quotaList.replaceChildren(...quotas.map(q=>{const item=document.createElement('li'),link=document.createElement('a');link.href='/habits';
+      link.textContent=q.name+' · '+(q.period?q.period.achieved+' / '+q.period.target+' '+(q.unit||'occurrences')+' · deadline '+q.period.end:'Starts '+q.pending.effective_on)+(q.pending&&q.period?' · pending change '+q.pending.effective_on:'');item.append(link);return item;}));
+  }
   for (const selector of [
     "#habit-progress",
     "#dashboard-budget",
@@ -282,11 +288,13 @@ async function loadOverview() {
   text("#budget-warning", warning);
   $("#budget-warning").hidden = !warning;
 }
+let currentHabitRows = [];
 async function loadTodayHabits() {
   const token = view.generation;
   const habits = await read("/get-habits"),
     list = $("#today-habits");
   if (!isTodayResponse(token)) return;
+  currentHabitRows = habits;
   const visibleHabits = compactItems(
     [...habits].sort(
       (a, b) => Number(Boolean(a.completed)) - Number(Boolean(b.completed)),
@@ -303,7 +311,7 @@ async function loadTodayHabits() {
   );
   text("#habits-count", `${habits.length} total`);
   if (!habits.length)
-    return setEmpty(list, "No habits yet. Add one in Habits to get started.");
+    return setEmpty(list, "No habits scheduled today. Manage habits and period quotas in Habits.");
   list.replaceChildren(
     ...visibleHabits.map((habit) => {
       const item = document.createElement("li"),
@@ -321,7 +329,8 @@ async function loadTodayHabits() {
       mark.className = "habit-checkmark";
       mark.setAttribute("aria-hidden", "true");
       label.className = "habit-row-content";
-      label.append(checkbox, name, mark);
+      label.append(checkbox);
+      label.append(name, mark);
       if(habit.target != null) {
         const progress = document.createElement('small');
         progress.className='habit-current-target';
@@ -465,6 +474,17 @@ async function initializeDashboard({ now } = {}) {
   $("#today-habits")?.addEventListener("change", async (event) => {
     const checkbox = event.target.closest("input[data-habit-id]");
     if (view.mode !== "today" || !checkbox || checkbox.disabled) return;
+    const habit=currentHabitRows.find(h=>String(h.habit_id)===String(checkbox.dataset.habitId));
+    if(habit?.target!=null){
+      checkbox.checked=Boolean(habit.completed);
+      const {editor,field,node,api,notifyChange}=await import('./workspace.js');
+      editor('Record today’s progress',[
+        node('p',{class:'full'},habit.habit_name+' · target '+habit.target+' '+(habit.unit||'')),
+        field('Today’s total · '+(habit.unit||'units'),'progress','number',habit.progress_amount??0,{min:0,max:99999999.99,step:habit.tracking==='count'?1:'.01',required:''}),
+        node('p',{class:'workspace-muted full'},'This replaces today’s total; it does not add an increment.'),
+      ],async values=>{await api('/api/habits/progress',{habit_id:habit.habit_id,date:habit.tracking_date,progress:values.progress});notifyChange();await refreshDashboard();},{submit:'Record progress'});
+      return;
+    }
     checkbox.disabled = true;
     checkbox.dataset.pending = "true";
     status("#habit-status", "Saving check-in…");
@@ -472,7 +492,7 @@ async function initializeDashboard({ now } = {}) {
       const response = await request("/toggle-habit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ habit_id: checkbox.dataset.habitId }),
+        body: JSON.stringify({ habit_id: checkbox.dataset.habitId, completed: checkbox.checked }),
       });
       if (!response.ok) throw new Error("Could not save");
       checkbox
@@ -659,11 +679,7 @@ function startHeader(fixedNow) {
     initializeExpenseDate();
     text(
       "#live-clock",
-      new Intl.DateTimeFormat("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hourCycle: "h23",
-      }).format(date),
+      new Intl.DateTimeFormat("en", { hour: "2-digit", minute: "2-digit", hourCycle: (globalThis.HabitCentsPreferences?.get().clock || '24') === '12' ? 'h12' : 'h23' }).format(date),
     );
     $("#live-clock")?.setAttribute(
       "datetime",
@@ -707,6 +723,7 @@ function startHeader(fixedNow) {
   if (document.addEventListener) {
     currentClock = createLocalClock({ now, onTick: tick });
     currentClock.start();
+    globalThis.addEventListener?.('habitcentspreferenceschange',()=>currentClock?.refresh());
   }
 }
 export function initDashboard(options = {}) {
@@ -878,6 +895,8 @@ function updateMode() {
       }).format(localDate(view.selected)),
     );
   renderWeek(readLocalDay());
+  const syncWeekOrder=()=>{renderWeek(readLocalDay());const labels=(globalThis.HabitCentsPreferences?.get().week==='sunday'?['S','M','T','W','T','F','S']:['M','T','W','T','F','S','S']);document.querySelectorAll?.('.continuity-weekdays').forEach(node=>[...node.children].forEach((child,index)=>child.textContent=labels[index]));};
+  syncWeekOrder();globalThis.addEventListener?.('habitcentspreferenceschange',syncWeekOrder);
 }
 async function selectDate(date) {
   if (!validCalendarDate(date)) return;
@@ -1643,10 +1662,12 @@ export function buildContinuityCells(data, historical = false) {
       throw new Error("Invalid completion date");
   const first = localDate(data.startDate),
     last = localDate(data.endDate),
-    end = shiftDate(data.endDate, 6 - ((last.getDay() + 6) % 7)),
+    weekOffset = globalThis.HabitCentsPreferences?.get().week === 'sunday' ? last.getDay() : (last.getDay() + 6) % 7,
+    startOffset = globalThis.HabitCentsPreferences?.get().week === 'sunday' ? first.getDay() : (first.getDay() + 6) % 7,
+    end = shiftDate(data.endDate, 6 - weekOffset),
     cells = [];
-  if ((first.getDay() + 6) % 7 !== 0)
-    throw new Error("Continuity range must start on Monday");
+  if (startOffset !== 0)
+    throw new Error("Continuity range must start on the selected week start");
   for (let date = data.startDate; date <= end; date = shiftDate(date, 1)) {
     if (cells.length >= 182) throw new Error("Continuity range is too large");
     const outside = date > data.endDate && historical;

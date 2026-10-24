@@ -7,8 +7,8 @@ This is separate from the legacy `/streak` difficulty-points endpoint. Existing 
 - All required habits complete earns exactly one day, irrespective of difficulty.
 - A partial current day preserves the preceding streak until the database day closes. Undoing today's last required completion removes today's earned day.
 - A closed incomplete day resets the count. A no-habit/rest day earns no day and resets at its closing deadline; it does not prematurely reset a still-open day.
-- Adding or deleting a habit changes the current day's requirements immediately. Closed-day requirements/completions remain immutable historical evidence. Archiving and scheduled rest days are not present in the current application; any future implementation must use the same capture protocol.
-- Day boundaries use PostgreSQL CURRENT_DATE and the connection's TimeZone, matching existing check-ins and budgets. The browser clock remains local and independent. A changed database timezone requires review rather than silently reinterpreting snapshots.
+- Adding/deleting or archiving a scheduled habit changes today's requirements; selected weekdays and specific dates participate only when due. Closed requirements/completions remain immutable evidence. Flexible quotas never enter the daily denominator or streak. Quota edits activate next period; captured future rules let unvisited days resolve correctly. See the approved recurrence rules in `docs/workspace-redesign.md`.
+- Day boundaries explicitly use `(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date`, matching check-ins and monthly calculations even when a pooler reports UTC. The browser clock remains local and independent. Existing enrollment timezone values are never rewritten; non-Dhaka enrollments remain unavailable pending history review.
 
 ## Storage and setup (not executed live)
 

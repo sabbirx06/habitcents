@@ -1,14 +1,39 @@
-<%- include("partials/head", { title: "Profile · HabitCents", css: ["/css/base.css"] }) %>
+<%- include("partials/head", { title: "Profile · HabitCents", css: ["/css/base.css", "/css/profile.css"] }) %>
 <body>
  <%- include("partials/navbar") %>
- <main class="profile-page"><%- include('partials/page-header', {left: include('partials/header-identity', {user, fallback: 'Your account'}), right: '<a class="page-header-action" href="/logout">Log out</a>'}) %>
-  <section class="motion-setting" aria-labelledby="animations-label">
-   <div><h2 id="animations-label">Animations</h2>
-    <p id="animations-help">Enable app animations even when system animation effects are off.</p>
-    <p class="motion-scope">Your choice is saved in this browser on this device.</p>
-   </div>
-   <button id="animations" type="button" role="switch" aria-checked="false" aria-labelledby="animations-label" aria-describedby="animations-help"><span class="motion-switch-track" aria-hidden="true"></span><span class="motion-switch-state" aria-hidden="true">Off</span></button>
-  </section>
+ <main class="profile-page">
+  <%- include('partials/page-header', {left: include('partials/header-identity', {user, fallback: 'Your account'}), right: '<a class="page-header-action" href="/logout">Log out</a>'}) %>
+  <div class="profile-content">
+   <header class="profile-identity"><span class="profile-avatar" aria-hidden="true"><%= (user.name || '?').trim().split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase() %></span><div><h2><%= user.name %></h2><p>Account and app preferences</p></div></header>
+   <section class="settings-section" aria-labelledby="account-title"><h2 id="account-title">Account</h2>
+    <form id="account-form" class="settings-row account-row"><div><label for="display-name">Display name</label><p>Shown on your profile and in the app.</p></div><div class="row-control"><input id="display-name" name="name" maxlength="100" required value="<%= user.name %>" autocomplete="name"><button class="profile-button" type="submit">Save changes</button></div></form>
+    <div class="settings-row"><div><h3>Email</h3><p>Your sign-in address. Contact support to change it.</p></div><div class="row-value"><%= user.email %></div></div>
+    <div class="settings-row"><div><h3>Password</h3><p>Update your sign-in password.</p></div><button id="open-password" class="text-action" type="button">Change password</button></div>
+    <p id="account-status" class="settings-status" role="status" aria-live="polite"></p>
+   </section>
+   <section class="settings-section" id="profile-reviews" aria-labelledby="reviews-title"><h2 id="reviews-title">Reviews</h2>
+    <div class="settings-row"><div class="segmented" role="group" aria-label="Review period"><button type="button" data-review-kind="weekly" aria-pressed="true">Weekly</button><button type="button" data-review-kind="monthly" aria-pressed="false">Monthly</button></div><div class="row-control"><button class="profile-button secondary" id="review-previous" type="button" aria-label="Previous review period">←</button><button class="profile-button secondary" id="review-current" type="button">Current period</button><button class="profile-button secondary" id="review-next" type="button" aria-label="Next review period">→</button></div></div>
+    <p id="review-range" class="section-intro"></p><p id="review-status" class="settings-status" role="status" aria-live="polite"></p><button id="review-retry" class="text-action" type="button" hidden>Retry review</button><div id="review-content" aria-live="polite"></div>
+   </section>
+   <section class="settings-section" aria-labelledby="preferences-title"><h2 id="preferences-title">Preferences</h2>
+    <div class="settings-row"><div><h3 id="animations-label">Animations</h3><p id="animations-help">Enable app animations even when system animation effects are off.</p><p class="scope-note">Applies in this browser.</p></div><button id="animations" type="button" role="switch" aria-checked="false" aria-labelledby="animations-label" aria-describedby="animations-help"><span class="motion-switch-track" aria-hidden="true"></span><span class="motion-switch-state" aria-hidden="true">Off</span></button></div>
+    <div class="settings-row"><div><h3 id="clock-label">Clock format</h3><p>Choose how time of day is displayed.</p></div><div class="segmented" role="group" aria-labelledby="clock-label"><button type="button" data-clock="12">12 hour</button><button type="button" data-clock="24">24 hour</button></div></div>
+    <div class="settings-row"><div><h3 id="week-label">Week starts on</h3><p>Changes calendar display order only.</p></div><div class="segmented" role="group" aria-labelledby="week-label"><button type="button" data-week="monday">Monday</button><button type="button" data-week="sunday">Sunday</button></div></div>
+    <p class="scope-note">These preferences are stored in this browser only. <span id="preference-status" role="status" aria-live="polite"></span></p>
+   </section>
+   <section class="settings-section" aria-labelledby="data-title"><h2 id="data-title">Data export</h2><p class="section-intro">Download records associated with your account. Exports include all available records.</p>
+    <div class="settings-row"><div><h3>Export all data</h3><p>JSON backup with habits, history, expenses, budgets and savings goals.</p></div><button class="export-button" data-export="json" type="button">Download JSON</button></div>
+    <div class="settings-row"><div><h3>Export expenses</h3><p>All expense records as a spreadsheet friendly CSV.</p></div><button class="export-button" data-export="expenses" type="button">Download CSV</button></div>
+    <div class="settings-row"><div><h3>Export habit history</h3><p>Recorded habit log entries only; no dates are inferred.</p></div><button class="export-button" data-export="habits" type="button">Download CSV</button></div>
+    <p id="export-status" class="settings-status" role="status" aria-live="polite"></p>
+   </section>
+  </div>
  </main>
- <script src="/js/profile.js" defer></script>
+ <dialog id="password-dialog" class="profile-dialog" aria-labelledby="password-title"><form id="password-form"><div class="dialog-heading"><h2 id="password-title">Change password</h2><button id="close-password" class="dialog-close" type="button" aria-label="Close">×</button></div>
+  <label for="current-password">Current password</label><input id="current-password" name="currentPassword" type="password" autocomplete="current-password" required>
+  <label for="new-password">New password</label><input id="new-password" name="newPassword" type="password" autocomplete="new-password" minlength="8" maxlength="72" required><p class="field-help">Use at least 8 characters.</p>
+  <label for="confirm-password">Confirm new password</label><input id="confirm-password" name="confirmPassword" type="password" autocomplete="new-password" minlength="8" maxlength="72" required>
+  <p id="password-status" role="status" aria-live="polite"></p><div class="dialog-actions"><button id="cancel-password" class="profile-button secondary" type="button">Cancel</button><button class="profile-button" type="submit">Update password</button></div>
+ </form></dialog>
+ <script src="/js/recurrence.js"></script><script src="/js/profile-preferences.js" defer></script><script src="/js/profile.js" defer></script><script src="/js/reviews.js" defer></script>
 </body></html>

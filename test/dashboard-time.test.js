@@ -69,3 +69,9 @@ test('half-year history remains bounded without inventing older completions',asy
  const cells=buildContinuityCells(data);assert.equal(cells.length,182);assert.equal(cells.filter(c=>c.state==='completed').length,1);assert.equal(cells[0].state,'unrecorded');
  assert.throws(()=>buildContinuityCells({...data,startDate:'2025-06-30'}),/too large/);
 });
+test('Sunday week display reorders columns without changing the ISO date associated with a selection',async()=>{
+ const {getWeekDays,buildContinuityCells}=await mod();globalThis.HabitCentsPreferences={get:()=>({week:'sunday'})};
+ try{const week=getWeekDays('2024-02-29');assert.equal(week[0].iso,'2024-02-25');assert.equal(week.find(d=>d.iso==='2024-02-29').weekday,'Thu');
+  const cells=buildContinuityCells({startDate:'2024-02-25',endDate:'2024-02-29',currentDate:'2024-02-29',habit:{createdDate:null},completedDates:['2024-02-29']});assert.equal(cells[4].date,'2024-02-29');assert.equal(cells[4].state,'completed');
+ }finally{delete globalThis.HabitCentsPreferences;}
+});

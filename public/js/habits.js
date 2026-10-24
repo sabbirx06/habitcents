@@ -13,6 +13,7 @@ import {
   notifyChange,
   bindWorkspaceRefresh,
   choiceField,
+  selectField,
   durationField,
   disclosure,
   animateValues,
@@ -23,14 +24,16 @@ let state = null,
   generation = 0,
   initialized = false,
   resizeTimer;
-const names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const weekdayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const names = () => globalThis.HabitCentsPreferences?.get().week === 'sunday' ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] : weekdayNames;
 export function shiftDay(day, count) {
   const date = new Date(day + "T12:00:00Z");
   date.setUTCDate(date.getUTCDate() + count);
   return date.toISOString().slice(0, 10);
 }
 export function heatmapDates(end, weeks) {
-  const offset = (new Date(end + "T12:00:00Z").getUTCDay() + 6) % 7,
+  const weekday = new Date(end + "T12:00:00Z").getUTCDay(),
+    offset = globalThis.HabitCentsPreferences?.get().week === 'sunday' ? weekday : (weekday + 6) % 7,
     last = shiftDay(end, 6 - offset),
     start = shiftDay(last, -weeks * 7 + 1);
   return Array.from({ length: weeks * 7 }, (_, i) => shiftDay(start, i));
@@ -56,9 +59,11 @@ export function habitCells({
       weekday = new Date(day + "T12:00:00Z").getUTCDay() || 7;
     if (day > today) state = "future";
     else if (createdOn && day < createdOn) state = "before-creation";
+    else if (available && createdOn && versions.length && day < versions[0].effective_on) state = 'not-started';
+    else if (available && version?.recurrence?.mode === 'quota') state = record?.completed_status || Number(record?.progress_amount)>0 ? 'activity' : 'rest';
     else if (available && record?.completed_status) state = "completed";
     else if (available && Number(record?.progress_amount) > 0) state = "partial";
-    else if (available && version && (version.archived || !version.schedule_days.includes(weekday)))
+    else if (available && version && (version.archived || (version.recurrence ? !globalThis.HabitRecurrence?.due(version,day) : !version.schedule_days.includes(weekday))))
       state = "rest";
     else if (available && version && day < today) state = "missed";
     return { date: day, state, record, target: version?.target, unit: version?.unit };
@@ -84,8 +89,9 @@ function habitIcon(icon) {
   return box;
 }
 function scheduleLabel(h) {
+  if(h.recurrence)return globalThis.HabitRecurrence?.label(h)||h.recurrence.frequency;
   const days = h.schedule_days || [1, 2, 3, 4, 5, 6, 7];
-  return days.length === 7 ? "Every day" : days.map((d) => names[d - 1]).join(", ");
+  return days.length === 7 ? "Every day" : days.map((d) => weekdayNames[d - 1]).join(", ");
 }
 function progressEditor(h) {
   editor(
@@ -96,7 +102,7 @@ function progressEditor(h) {
         required: "",
         min: 0,
         max: 99999999.99,
-        step: ".01",
+        step: h.tracking === 'count' ? '1' : '.01',
       }),
       node(
         "p",
@@ -117,7 +123,7 @@ function progressEditor(h) {
   );
 }
 async function toggle(h, control) {
-  if (h.target != null) return progressEditor(h);
+  if (h.tracking !== 'checkoff' && h.target != null) return progressEditor(h);
   const before = h.completed;
   const restoreFocus = document.activeElement === control;
   control.disabled = true;
@@ -154,6 +160,8 @@ export function habitAccent(habit, categories = []) {
   return palette[index];
 }
 function habitEditor(h = {}) {
+  const original = h;
+  h = h.pending ? {...h,...h.pending,habit_id:h.habit_id,habit_name:h.habit_name} : h;
   const name = field("Habit name", "name", "text", h.habit_name || h.name, {
       required: "",
       maxlength: 255,
@@ -207,7 +215,7 @@ function habitEditor(h = {}) {
           value: i,
           ...(selected.includes(i) ? { checked: "" } : {}),
         }),
-        names[i - 1],
+        weekdayNames[i - 1],
       ),
     );
   days.append(
@@ -218,69 +226,71 @@ function habitEditor(h = {}) {
     ),
     choices,
   );
-  const target = field("Daily target", "target", "number", h.target, {
-      min: ".01",
-      max: 99999999.99,
-      step: ".01",
-    }),
-    unit = field("Unit", "unit", "text", h.unit || 'times', { maxlength: 40 });
-  const tracking = choiceField('Track by', 'tracking', [['checkoff','Check-off'],['quantity','Quantity'],['duration','Duration']], h.target == null ? 'checkoff' : h.unit === 'minutes' ? 'duration' : 'quantity');
-  const repeat = choiceField('Repeat', 'repeat', [['daily','Every day'],['weekdays','Selected weekdays']], selected.length === 7 ? 'daily' : 'weekdays');
-  const quantityFields = node('div',{class:'tracking-fields full'},target,unit);
-  const duration = durationField(h.unit === 'minutes' ? h.target : 20, 'duration_target');
-  target.querySelector('input').required = true;
-  unit.querySelector('input').required = true;
-  const preview = node('div',{class:'habit-editor-preview full','aria-hidden':'true'});
-  name.classList.add('full');
-  const { form } = editor(
-    h.habit_id ? "Edit habit" : "New habit",
-    [
-      name,
-      preview,
-      tracking,
-      quantityFields,
-      duration,
-      repeat,
-      days,
-      icon,
-      color,
-      disclosure('Description and category', [description,category], !!(h.description || h.category)),
-      ...(!h.habit_id ? [state ? node('div',{class:'form-preset-row full'},button('Choose a preset',presets,true)) : node('p',{class:'workspace-muted full'},'Presets are unavailable until habits load.')] : []),
-      node(
-        "p",
-        { class: "workspace-muted full" },
-        "Selected weekdays repeat each week. Schedule and target changes apply from today; earlier records keep their original rules.",
-      ),
-    ],
-    async (values, form) => {
-      const schedule = [...form.querySelectorAll('[name=weekday]:checked')].map(n => Number(n.value));
-      if(!schedule.length) throw Error('Select at least one weekday.');
-      await api("/api/habits/save", {
-        ...values,
-        target: values.tracking === 'checkoff' ? '' : values.tracking === 'duration' ? values.duration_target : values.target,
-        unit: values.tracking === 'checkoff' ? '' : values.tracking === 'duration' ? 'minutes' : values.unit,
-        habit_id: h.habit_id,
-        schedule_days: schedule,
-      });
-      notifyChange();
-      await loadHabits();
-    },
-    { submit: h.habit_id ? 'Save habit' : 'Create habit' },
-  );
-  const sync = () => {
-    const mode = form.querySelector('[name=tracking]:checked').value;
-    quantityFields.hidden = mode !== 'quantity'; duration.hidden = mode !== 'duration';
-    for (const field of quantityFields.querySelectorAll('input')) field.disabled = mode !== 'quantity';
-    for (const field of duration.querySelectorAll('input')) field.disabled = mode !== 'duration';
-    const daily = form.querySelector('[name=repeat]:checked').value === 'daily';
-    days.hidden = daily;
-    if(daily) choices.querySelectorAll('input').forEach(input => input.checked = true);
-    const selectedIcon = form.querySelector('[name=icon]:checked').value, selectedColor = form.querySelector('[name=color]:checked').value;
-    preview.style.setProperty('--habit-tone', { lavender:'#e0cfe0',blue:'#c5d4e7',lime:'#d6df9c',peach:'#ead4c3',pink:'#e5cde2' }[selectedColor]);
-    preview.replaceChildren(habitIcon(selectedIcon),node('span',{},name.querySelector('input').value || 'Your habit'));
-  };
-  form.addEventListener('change', sync); name.addEventListener('input', sync); sync();
+  const R=globalThis.HabitRecurrence;
+  const target = field('Daily target','target','number',h.target||1,{min:'.01',max:99999999.99,step:'.01',required:''});
+  const unit = field('Unit','unit','text',h.unit||'times',{maxlength:40,required:''});
+  const tracking = choiceField('Track by','tracking',[['checkoff','Check-off'],['count','Count'],['measure','Measure']],h.tracking||(h.target==null?'checkoff':'measure'));
+  const frequency=h.recurrence?.frequency||(selected.length===7?'daily':'weekdays');
+  const repeat=choiceField('Repeat','repeat',[['daily','Every day'],['weekdays','Selected weekdays'],['weekly','Weekly'],['monthly','Monthly'],['yearly','Yearly']],frequency);
+  const mode=choiceField('Schedule','schedule_mode',[['quota','Within the period'],['scheduled','On a specific day/date']],h.recurrence?.mode||'quota');
+  const weekday=selectField('Due weekday','due_weekday',weekdayNames.map((name,i)=>[i+1,name]),h.recurrence?.weekday||7);
+  const anchorDay=field('Day of month','anchor_day','number',h.recurrence?.day||1,{min:1,max:31,step:1,required:''});
+  const anchorMonth=selectField('Month','anchor_month',Array.from({length:12},(_,i)=>[i+1,new Intl.DateTimeFormat('en',{month:'long',timeZone:'UTC'}).format(new Date(Date.UTC(2024,i,1)))]),h.recurrence?.month||1);
+  const start=choiceField('First quota period','start_choice',[['this','Start this period'],['next','Start next period']],R.activation(state.today,frequency)===state.today?'this':'next');
+  const unitKind=selectField('Measure unit','measure_unit',[['minutes','Minutes'],['hours','Hours'],['litres','Litres'],['kilometres','Kilometres'],['custom','Other unit']],!h.unit?'minutes':['minutes','hours','litres','kilometres'].includes(h.unit)?h.unit:'custom');
+  const duration=durationField(h.unit==='minutes'?h.target:20,'duration_target');
+  const adjustments=node('div',{class:'duration-presets'},button('−',()=>adjust(-1),true),button('+',()=>adjust(1),true));
+  function adjust(delta){const input=target.querySelector('input');input.value=String(Math.max(input.min==='1'?1:.01,Math.round((Number(input.value||0)+delta)*100)/100));form.dispatchEvent(new Event('change'));}
+  const quantityFields=node('div',{class:'tracking-fields full'},target,adjustments,unit);
+  const summary=node('p',{class:'workspace-muted full',role:'status'}),activationNote=node('p',{class:'workspace-muted full'});
+  const preview=node('div',{class:'habit-editor-preview full','aria-hidden':'true'});name.classList.add('full');
+  const {form}=editor(h.habit_id?'Edit habit':'New habit',[
+    name,preview,tracking,unitKind,quantityFields,duration,repeat,mode,days,weekday,anchorDay,anchorMonth,start,activationNote,summary,icon,color,
+    disclosure('Description and category',[description,category],!!(h.description||h.category)),
+    ...(!h.habit_id&&state?[node('div',{class:'form-preset-row full'},button('Choose a preset',presets,true))]:[]),
+  ],async(values,form)=>{
+    const frequency=values.repeat,nonDaily=['weekly','monthly','yearly'].includes(frequency),scheduleMode=nonDaily?values.schedule_mode:'scheduled';
+    const schedule=frequency==='weekdays'?[...form.querySelectorAll('[name=weekday]:checked')].map(n=>Number(n.value)):[1,2,3,4,5,6,7];
+    const measured=values.tracking==='measure',measureUnit=values.measure_unit==='custom'?values.unit:values.measure_unit;
+    const payload={...values,habit_id:h.habit_id,schedule_days:schedule,
+      target:values.tracking==='checkoff'?'':measured&&measureUnit==='minutes'?values.duration_target:values.target,
+      unit:values.tracking==='checkoff'?'':measured?measureUnit:values.unit,
+      recurrence:{frequency,mode:scheduleMode,...(scheduleMode==='scheduled'&&frequency==='weekly'?{weekday:Number(values.due_weekday)}:{}),...(scheduleMode==='scheduled'&&['monthly','yearly'].includes(frequency)?{day:Number(values.anchor_day)}:{}),...(scheduleMode==='scheduled'&&frequency==='yearly'?{month:Number(values.anchor_month)}:{})},
+    };
+    if(state.recurrenceReady===false){delete payload.recurrence;delete payload.tracking;}
+    await api('/api/habits/save',payload);notifyChange();await loadHabits();
+  },{submit:h.habit_id?'Save habit':'Create habit'});
+  const value=name=>form.querySelector('[name="'+name+'"]:checked')?.value||form.querySelector('[name="'+name+'"]')?.value;
+  const show=(container,visible)=>{container.hidden=!visible;container.querySelectorAll('input,select').forEach(input=>input.disabled=!visible);};
+  let previousFrequency=frequency;
+  function sync(){
+    const track=value('tracking'),freq=value('repeat'),nonDaily=['weekly','monthly','yearly'].includes(freq),quota=nonDaily&&value('schedule_mode')==='quota';
+    const measure=track==='measure',minutes=measure&&value('measure_unit')==='minutes';
+    show(unitKind,measure);show(quantityFields,track!=='checkoff'&&!minutes);show(duration,minutes);
+    show(unit,track==='count'||measure&&value('measure_unit')==='custom');
+    target.querySelector('input').min=track==='count'?'1':'.01';target.querySelector('input').step=track==='count'?'1':'.01';
+    target.querySelector('.workspace-label').textContent=({daily:'Daily',weekdays:'Daily',weekly:'Weekly',monthly:'Monthly',yearly:'Yearly'}[freq])+' target';
+    show(mode,nonDaily);show(days,freq==='weekdays');show(weekday,nonDaily&&!quota&&freq==='weekly');show(anchorDay,nonDaily&&!quota&&freq!=='weekly');show(anchorMonth,nonDaily&&!quota&&freq==='yearly');show(start,!h.habit_id&&quota);
+    anchorDay.querySelector('input').max=freq==='yearly'?R.monthEnd(2024,Number(value('anchor_month'))):31;
+    if(!h.habit_id&&quota&&freq!==previousFrequency){form.querySelector('[name=start_choice][value="'+(R.activation(state.today,freq)===state.today?'this':'next')+'"]').checked=true;}previousFrequency=freq;
+    const r={frequency:freq,mode:quota?'quota':'scheduled',weekday:Number(value('due_weekday')),day:Number(value('anchor_day')),month:Number(value('anchor_month'))};
+    const schedule_days=freq==='weekdays'?[...choices.querySelectorAll('input:checked')].map(n=>Number(n.value)):[1,2,3,4,5,6,7];
+    const selectedUnit=measure?(value('measure_unit')==='custom'?value('unit'):value('measure_unit')):value('unit');
+    const amount=track==='checkoff'?'once':(minutes?value('duration_target'):value('target'))+' '+(selectedUnit||'units');
+    summary.textContent=(name.querySelector('input').value||'Your habit')+' · '+amount+' · '+R.label({recurrence:r,schedule_days})+'. '+(quota?'Flexible quota; excluded from Today’s percentage and the universal streak.':'Participates in Today’s percentage and the universal streak when due.');
+    if(quota||h.habit_id&&(R.quota(original)||R.quota(original.pending))){const effective=h.habit_id?R.period(state.today,R.quota(original)?original.recurrence.frequency:freq).next:R.activation(state.today,freq,value('start_choice'));
+      activationNote.textContent=(h.habit_id?'Change effective ':'Starts ')+effective+' · deadline '+R.period(effective,freq).end+'. '+(h.habit_id?'The current period’s rule and progress stay unchanged.':effective===state.today?'Full target applies to the remaining period; it is not prorated.':'No requirement or missed status before the start date.');
+    }else activationNote.textContent=h.habit_id?'Changes take effect today; closed history keeps its rules.':'Scheduled occurrences begin on or after '+state.today+'.';
+    const selectedIcon=value('icon'),selectedColor=value('color');preview.style.setProperty('--habit-tone',{lavender:'#e0cfe0',blue:'#c5d4e7',lime:'#d6df9c',peach:'#ead4c3',pink:'#e5cde2'}[selectedColor]);preview.replaceChildren(habitIcon(selectedIcon),node('span',{},name.querySelector('input').value||'Your habit'));
+  }
+  if(state.recurrenceReady===false){
+    repeat.querySelectorAll('input').forEach(input=>{if(['weekly','monthly','yearly'].includes(input.value))input.disabled=true;});
+    tracking.querySelector('[value="count"]').disabled=true;
+    form.prepend(node('p',{class:'workspace-muted full'},'Non-daily recurrence and Count tracking require reviewed recurrence storage. Existing daily/weekday settings remain available.'));
+  }
+  form.addEventListener('change',sync);form.addEventListener('input',sync);sync();
 }
+
 function cellDescription(c) {
   return (
     displayDate(c.date) +
@@ -290,6 +300,8 @@ function cellDescription(c) {
       completed: "Completed",
       missed: "Scheduled day with no completed check-in",
       partial: "Partial progress",
+      activity: "Recorded quota activity (period fulfilment is shown separately)",
+      'not-started': 'Quota has not started; no requirement',
       rest: "Not scheduled",
       future: "Future date",
       "before-creation": "Before known habit creation",
@@ -307,7 +319,7 @@ function history(h, weeks = 20, detail = false, selected = state.today) {
     weekdays = node(
       "div",
       { class: "heatmap-weekdays", "aria-hidden": "true" },
-      names.map((n, i) => node("span", {}, i % 2 === 0 ? n[0] : "")),
+      names().map((n, i) => node("span", {}, i % 2 === 0 ? n[0] : "")),
     ),
     grid = node("div", {
       class: "habit-heatmap",
@@ -431,6 +443,10 @@ function history(h, weeks = 20, detail = false, selected = state.today) {
       )
         throw Error("History date mismatch.");
       paint(result.records, result.versions, true);
+      if(detail&&result.periods?.length){
+        shell.querySelector('.quota-history')?.remove();
+        shell.append(node('div',{class:'quota-history'},node('h3',{},'Quota periods'),...result.periods.map(p=>node('p',{class:'workspace-muted'},p.start+' – '+p.end+' · '+p.achieved+' / '+p.target+' '+(p.unit||'occurrences')+' · '+p.status))));
+      }
       status(feedback, result.records.length ? "" : "No check-ins recorded.");
     } catch (e) {
       if (token !== request || current !== generation || !shell.isConnected) return;
@@ -460,7 +476,7 @@ function details(h, selected = state.today) {
     node(
       "p",
       { class: "workspace-muted" },
-      "Historical check-ins are read-only. Editing a habit changes today and future requirements.",
+      "Historical check-ins are read-only. Quota edits take effect next period; daily/scheduled edits apply today.",
     ),
     node(
       "div",
@@ -552,8 +568,10 @@ function renderHabits() {
             onclick: () => toggle(h, control),
           },
         );
+      const completionIcon=globalThis.HabitIcons?.completion();
+      if(completionIcon)control.append(completionIcon);
       const icon = habitIcon(h.icon);
-      control.disabled = !h.due_today || !!h.archived_on;
+      control.disabled = !(h.can_record ?? h.due_today) || !!h.archived_on;
       card.style.setProperty("--heat-cell", cellSize + "px");
       card.append(
         ...[
@@ -571,16 +589,27 @@ function renderHabits() {
                 h.description ? node("p", { class: "workspace-muted" }, h.description) : null,
               ),
             ),
-            node('span', { class: 'habit-state' }, h.completed ? 'Done' : h.due_today ? (h.target ? 'Record progress' : 'To do') : 'Rest day'),
+            h.period
+              ? node('span',{class:'habit-state'},h.period.status === 'complete' ? 'Quota fulfilled' : 'Period quota')
+              : h.status === 'not-started'
+              ? node('span',{class:'habit-state'},'Not started')
+              : h.due_today && h.target
+              ? node('span', { class: 'habit-state' }, 'Record progress')
+              : !h.due_today
+                ? node('span', { class: 'habit-state' }, 'Rest day')
+                : null,
             control,
           ),
-          h.target
+          h.period
+            ? node('p',{class:'workspace-muted'},h.period.achieved+' / '+h.period.target+' '+(h.unit||'occurrences')+' · '+h.period.remaining+' remaining · deadline '+h.period.end)
+            : h.target
             ? node(
                 "p",
                 { class: "workspace-muted" },
                 (h.progress_amount ?? 0) + " / " + h.target + " " + h.unit + " today",
               )
             : null,
+          h.pending ? node('p',{class:'workspace-muted'},'Pending: '+(h.pending.target??'Check-off')+' '+(h.pending.unit||'')+' · '+scheduleLabel(h.pending)+' · effective '+h.pending.effective_on) : null,
           history(h, weeks),
           node(
             "div",

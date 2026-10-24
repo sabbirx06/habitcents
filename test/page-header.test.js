@@ -36,3 +36,10 @@ test('habit banner range follows the actual heatmap dates across years and respo
     assert.equal(historyRangeLabel('2026-01-02', weeks), format(dates[0]) + ' – ' + format(dates.at(-1)));
   }
 });
+test('Sunday preference orders habit heatmap columns by Sunday while retaining the dates', async () => {
+  const uri = source => 'data:text/javascript;base64,' + Buffer.from(source).toString('base64');
+  const source = fs.readFileSync('public/js/habits.js', 'utf8').replace('"./workspace.js"', JSON.stringify(uri(fs.readFileSync('public/js/workspace.js', 'utf8'))));
+  const {heatmapDates}=await import(uri(source));globalThis.HabitCentsPreferences={get:()=>({week:'sunday'})};
+  try{const dates=heatmapDates('2024-03-01',8);assert.equal(new Date(dates[0]+'T12:00:00Z').getUTCDay(),0);assert.equal(dates.at(-1),'2024-03-02');}
+  finally{delete globalThis.HabitCentsPreferences;}
+});

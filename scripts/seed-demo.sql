@@ -10,10 +10,10 @@
 -- This is NOT a reset/cleanup script. Do not remove guards to rerun it.
 BEGIN;
 SET LOCAL search_path = public, pg_temp;
--- Configurable calendar zone. The app uses database CURRENT_DATE, not timestamps
--- for logs; browser clock is local. Match the app DB session zone for exact 'today'.
+-- Match the authoritative Asia/Dhaka tracking calendar, independent of pooler settings.
+-- Browser clock display remains local.
 -- This setting applies ONLY to this seed transaction, not to the running app.
-SET LOCAL TIME ZONE 'UTC';
+SET LOCAL TIME ZONE 'Asia/Dhaka';
 
 DO $demo$
 DECLARE

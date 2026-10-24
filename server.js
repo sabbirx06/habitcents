@@ -5,6 +5,7 @@ const express = require("express"); // Web framework for Node.js
 const path = require("path"); // Node.js utility for working with file paths
 const bcrypt = require("bcrypt");
 const session = require("express-session"); // Session management for user authentication
+const crypto = require('crypto');
 
 function createApp({ db, sessionSecret, sessionStore }) {
   if (!sessionSecret) throw new Error("SESSION_SECRET is required");
@@ -68,6 +69,9 @@ function createApp({ db, sessionSecret, sessionStore }) {
     next(); // Continue to the next middleware/route handler
   }
 
+  require('./lib/habit-service').registerRecurrence(app,{db,requireLogin,presets:presetHabits});
+  require('./lib/reviews').registerReviews(app,{db,requireLogin});
+
   // Helper function for protected page routes - reduces code duplication
   function renderProtectedPage(pageName) {
     return (req, res) => {
@@ -101,7 +105,59 @@ function createApp({ db, sessionSecret, sessionStore }) {
     res.render("dashboard", { user: req.session.user, page: "dashboard" });
   });
 
-  app.get("/profile", requireLogin, (req,res)=>res.render("profile", {user:req.session.user,page:"profile"}));
+  app.get("/profile", requireLogin, (req,res)=>{req.session.csrfToken ||= crypto.randomBytes(32).toString('hex');res.render("profile", {user:req.session.user,page:"profile",csrfToken:req.session.csrfToken});});
+
+  function requireCsrf(req,res,next){const expected=req.session.csrfToken,provided=req.get('X-CSRF-Token');if(!expected||!provided||provided.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(provided),Buffer.from(expected)))return res.status(403).json({error:'Refresh the page and try again.'});next();}
+  app.post('/profile/account',requireLogin,requireCsrf,async(req,res)=>{
+    if(typeof req.body.name!=='string')return res.status(400).json({error:'Enter a valid display name.'});
+    const name=req.body.name.trim();if(!name||name.length>100)return res.status(400).json({error:'Display name must be 1 to 100 characters.'});
+    const {rows}=await db.query('UPDATE users SET name=$1 WHERE user_id=$2 RETURNING user_id,name,email',[name,req.session.user.user_id]);
+    if(!rows.length)return res.status(404).json({error:'Account not found.'});
+    req.session.user.name=rows[0].name;res.json({user:{name:rows[0].name,email:rows[0].email}});
+  });
+  app.post('/profile/password',requireLogin,requireCsrf,async(req,res)=>{
+    const {currentPassword,newPassword,confirmPassword}=req.body||{};
+    if(typeof newPassword==='string'&&typeof confirmPassword==='string'&&newPassword!==confirmPassword)return res.status(400).json({error:'New passwords do not match.'});
+    if(typeof currentPassword!=='string'||typeof newPassword!=='string'||newPassword.length<8||Buffer.byteLength(newPassword,'utf8')>72)return res.status(400).json({error:'New password must be at least 8 characters and at most 72 bytes.'});
+    const {rows}=await db.query('SELECT password FROM users WHERE user_id=$1',[req.session.user.user_id]);
+    if(!rows.length)return res.status(404).json({error:'Account not found.'});
+    if(!/^\$2[ab]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(rows[0].password)||!(await bcrypt.compare(currentPassword,rows[0].password)))return res.status(403).json({error:'Current password is incorrect.'});
+    const hash=await bcrypt.hash(newPassword,12);await db.query('UPDATE users SET password=$1 WHERE user_id=$2',[hash,req.session.user.user_id]);res.json({success:true});
+  });
+
+  const csvCell=value=>{if(value===null||value===undefined)return '';let s=String(value);const numeric=/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(s);if(!numeric&&(/^[\t\r]/.test(s)||/^[\s\u0000-\u001f\uFEFF]*[=+\-@]/.test(s)))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
+  async function readExportSnapshot(run){const client=await db.connect();try{await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');const result=await run(client);await client.query('COMMIT');return result;}catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}}
+  const sendCsv=(res,filename,headers,rows)=>{res.type('text/csv; charset=utf-8');res.set('Content-Disposition',`attachment; filename="${filename}"`);res.set('Cache-Control','private, no-store');res.send('\uFEFF'+[headers,...rows.map(r=>r.map(csvCell))].map(r=>r.join(',')).join('\r\n'));};
+  app.get('/profile/export/expenses',requireLogin,async(req,res)=>{
+    const {rows}=await db.query(`SELECT expense_id,date::text AS date,description,CASE WHEN to_jsonb(e)->>'category' IS NULL THEN NULL ELSE to_jsonb(e)->>'category' END AS category,amount::text AS amount FROM expenses e WHERE user_id=$1 ORDER BY date,expense_id`,[req.session.user.user_id]);
+    sendCsv(res,'habitcents-expenses.csv',['id','date','description','category','amount'],rows.map(r=>[r.expense_id,r.date,r.description,r.category,r.amount]));
+  });
+  app.get('/profile/export/habits',requireLogin,async(req,res)=>{
+    const {logs:rows}=await readExportSnapshot(client=>require('./lib/habit-export').habitExport(client,req.session.user.user_id));
+    sendCsv(res,'habitcents-habit-history.csv',['habit_id','habit_name','date','completed','progress_amount','target','unit','tracking','recurrence','schedule_days','rule_effective_on'],rows.map(r=>[r.habit_id,r.habit_name,r.date,r.completed_status,r.progress_amount,r.target,r.unit,r.tracking,r.recurrence?JSON.stringify(r.recurrence):null,r.schedule_days?JSON.stringify(r.schedule_days):null,r.effective_on]));
+  });
+  app.get('/profile/export/json',requireLogin,async(req,res)=>{
+    const bundle=await readExportSnapshot(async db=>{
+    const owner=req.session.user.user_id,warnings=[];
+    const [users,habits,logs,expenses,budgets,goals]=await Promise.all([
+      db.query('SELECT user_id,name,email FROM users WHERE user_id=$1',[owner]),
+      db.query(`SELECT habit_id,user_id,habit_name,difficulty_score,category,to_jsonb(h)->>'description' AS description,to_jsonb(h)->>'icon' AS icon,to_jsonb(h)->>'color' AS color,to_jsonb(h)->>'created_on' AS created_on,to_jsonb(h)->>'target' AS target,to_jsonb(h)->>'unit' AS unit,to_jsonb(h)->'schedule_days' AS schedule_days,to_jsonb(h)->'recurrence' AS recurrence,to_jsonb(h)->>'tracking' AS tracking,to_jsonb(h)->>'archived_on' AS archived_on FROM habits h WHERE user_id=$1 ORDER BY habit_id`,[owner]),
+      db.query(`SELECT hl.log_id,hl.habit_id,hl.date::text AS date,hl.completed_status,to_jsonb(hl)->>'streak_points_earned' AS streak_points_earned,to_jsonb(hl)->>'progress_amount' AS progress_amount FROM habit_logs hl JOIN habits h USING(habit_id) WHERE h.user_id=$1 ORDER BY hl.date,hl.log_id`,[owner]),
+      db.query(`SELECT expense_id,user_id,budget_id,date::text AS date,description,amount::text AS amount,to_jsonb(e)->>'category' AS category,to_jsonb(e)->>'recurring_id' AS recurring_id,to_jsonb(e)->>'scheduled_for' AS scheduled_for FROM expenses e WHERE user_id=$1 ORDER BY date,expense_id`,[owner]),
+      db.query('SELECT budget_id,user_id,total_budget::text AS total_budget,month,year FROM budgets WHERE user_id=$1 ORDER BY year,month',[owner]),
+      db.query(`SELECT goal_id,user_id,name,saved_amount::text AS saved_amount,target_amount::text AS target_amount,to_jsonb(g)->>'deadline' AS deadline,COALESCE((to_jsonb(g)->>'archived')::boolean,false) AS archived FROM savings_goals g WHERE user_id=$1 ORDER BY goal_id`,[owner])
+    ]);
+    if(!(await db.query("SELECT to_regclass('habit_schedule_versions') IS NOT NULL AS ready")).rows[0].ready)warnings.push('Habit schedule/history snapshots are not supported by this installation.');
+    let recurringExpenses=[];try{const {rows}=await db.query("SELECT table_name FROM information_schema.tables WHERE table_schema=current_schema() AND table_name='recurring_expenses'");if(rows.length){const result=await db.query('SELECT recurring_id,user_id,name,amount::text AS amount,category,frequency,starts_on::text AS starts_on,next_due::text AS next_due,ends_on::text AS ends_on,enabled FROM recurring_expenses WHERE user_id=$1 ORDER BY recurring_id',[owner]);recurringExpenses=result.rows;}else warnings.push('Recurring-expense definitions are not supported by this installation.');}catch(error){if(error.code==='42P01')warnings.push('Recurring-expense definitions are not supported by this installation.');else throw error;}
+    warnings.push('Savings exports contain current saved balances only; dated contribution history is not stored by this installation.');
+    const exported=await require('./lib/habit-export').habitExport(db,owner),optional={};
+    for(const key of ['habitCategories','streakEnrollment','streakDays','streakRequirements']){const result=await require('./lib/habit-export').optionalOwned(db,key,owner);optional[key]=result.rows;if(result.warning)warnings.push(result.warning);}
+    const payload={schemaVersion:1,exportedAt:new Date().toISOString(),description:'HabitCents account data export. Amounts are preserved as decimal strings. Historical rule values are null where no effective-dated evidence exists.',datasets:{user:users.rows[0]||null,habits:habits.rows,habitHistory:logs.rows,habitScheduleHistory:exported.versions,recordedHabitRules:exported.logs,expenses:expenses.rows,budgets:budgets.rows,savingsGoals:goals.rows,recurringExpenses,...optional},warnings};
+    return {payload,warnings};
+    });
+    const {payload,warnings}=bundle;
+    res.type('application/json; charset=utf-8').set('Content-Disposition','attachment; filename="habitcents-export.json"').set('Cache-Control','private, no-store');if(warnings.length)res.set('X-Export-Warnings',encodeURIComponent(warnings.join(' ')));res.send(JSON.stringify(payload));
+  });
 
   // Protected routes using the helper function - all require login
   app.get("/habits", requireLogin, renderProtectedPage("habits")); // Habit tracking page
@@ -169,16 +225,22 @@ function createApp({ db, sessionSecret, sessionStore }) {
     const { name, difficulty, category } = req.body;
     const score = Number(difficulty);
     if (!name || !Number.isInteger(score) || score < 1 || score > 10) return res.redirect('/habits');
-    await withHabitMutation(req.session.user.user_id,client=>client.query('INSERT INTO habits (user_id,habit_name,difficulty_score,category) VALUES ($1,$2,$3,$4)',
-      [req.session.user.user_id, name, score, category || null]));
+    await withHabitMutation(req.session.user.user_id,async client=>{
+      const result=await client.query('INSERT INTO habits (user_id,habit_name,difficulty_score,category) VALUES ($1,$2,$3,$4) RETURNING habit_id',[req.session.user.user_id,name,score,category||null]);
+      const ready=(await client.query("SELECT to_regclass('habit_schedule_versions') IS NOT NULL AND EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='habits' AND column_name='created_on') AS ready")).rows[0].ready;
+      if(ready){
+        const habit=result.rows[0].habit_id;
+        await client.query(`UPDATE habits SET created_on=(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date WHERE habit_id=$1`,[habit]);
+        await client.query(`INSERT INTO habit_schedule_versions(habit_id,effective_on,schedule_days,target,unit,archived) SELECT habit_id,created_on,schedule_days,target,unit,false FROM habits WHERE habit_id=$1`,[habit]);
+      }
+      return result;
+    });
     res.redirect('/habits');
   });
 
   app.get('/get-habits', requireLogin, async (req, res) => {
-    const { rows } = await db.query(`SELECT h.*, CASE WHEN hl.completed_status IS TRUE THEN 1 ELSE 0 END AS completed
-      FROM habits h LEFT JOIN habit_logs hl ON h.habit_id=hl.habit_id AND hl.date=CURRENT_DATE
-      WHERE h.user_id=$1 AND to_jsonb(h)->>'archived_on' IS NULL
-      AND (to_jsonb(h)->'schedule_days' IS NULL OR to_jsonb(h)->'schedule_days' @> to_jsonb(EXTRACT(ISODOW FROM CURRENT_DATE)::integer)) ORDER BY h.habit_id`, [req.session.user.user_id]);
+    const {habits,today}=await require('./lib/habit-service').currentHabits(db,req.session.user.user_id);
+    const rows=habits.filter(h=>h.due_today).map(h=>({...h,tracking_date:today,completed:h.completed?1:0}));
     res.json(rows);
   });
 
@@ -197,19 +259,20 @@ function createApp({ db, sessionSecret, sessionStore }) {
         await client.query('ROLLBACK');
         return res.status(404).json({ error: 'Habit not found' });
       }
-      const habit=owned.rows[0];
-      const {rows:[clock]}=await client.query('SELECT EXTRACT(ISODOW FROM CURRENT_DATE)::integer AS weekday');
-      if(habit.archived_on||habit.schedule_days&&!habit.schedule_days.includes(clock.weekday)){
+      const habit=(await require('./lib/habit-service').currentHabits(client,req.session.user.user_id)).habits.find(h=>String(h.habit_id)===String(req.body.habit_id));
+      if(!habit.due_today){
         await client.query('ROLLBACK');return res.status(409).json({error:'Habit is not scheduled today.'});
       }
-      const removed = await client.query('DELETE FROM habit_logs WHERE habit_id=$1 AND date=CURRENT_DATE AND completed_status IS TRUE RETURNING log_id', [req.body.habit_id]);
-      if (!removed.rows.length) {
-        if(habit.target!=null)await client.query('INSERT INTO habit_logs(habit_id,date,completed_status,progress_amount) VALUES($1,CURRENT_DATE,true,$2) ON CONFLICT(habit_id,date) DO UPDATE SET completed_status=true,progress_amount=EXCLUDED.progress_amount',[req.body.habit_id,habit.target]);
-        else await client.query('INSERT INTO habit_logs (habit_id,date,completed_status) VALUES ($1,CURRENT_DATE,true) ON CONFLICT(habit_id,date) DO UPDATE SET completed_status=true', [req.body.habit_id]);
+      if(habit.target!=null){await client.query('ROLLBACK');return res.status(409).json({error:'Enter today’s total in the progress editor.'});}
+      if(req.body.completed!==undefined&&typeof req.body.completed!=='boolean'){await client.query('ROLLBACK');return res.status(400).json({error:'Choose a completion state.'});}
+      const desired=req.body.completed??!habit.completed;
+      if(!desired)await client.query(`DELETE FROM habit_logs WHERE habit_id=$1 AND date=(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date`, [req.body.habit_id]);
+      if (desired) {
+        await client.query(`INSERT INTO habit_logs (habit_id,date,completed_status) VALUES ($1,(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date,true) ON CONFLICT(habit_id,date) DO UPDATE SET completed_status=true`, [req.body.habit_id]);
       }
       await require('./lib/universal-streak').captureUniversalDay(client,req.session.user.user_id);
       await client.query('COMMIT');
-      res.send(removed.rows.length ? 'unchecked' : 'checked');
+      res.send(desired ? 'checked' : 'unchecked');
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -235,7 +298,7 @@ function createApp({ db, sessionSecret, sessionStore }) {
   app.get('/streak', requireLogin, async (req, res) => {
     const { rows } = await db.query(`SELECT COALESCE(SUM(h.difficulty_score),0)::integer AS streak
       FROM habit_logs hl JOIN habits h ON hl.habit_id=h.habit_id
-      WHERE h.user_id=$1 AND hl.date=CURRENT_DATE`, [req.session.user.user_id]);
+      WHERE h.user_id=$1 AND hl.date=(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date`, [req.session.user.user_id]);
     res.json(rows[0]);
   });
 
@@ -243,7 +306,7 @@ function createApp({ db, sessionSecret, sessionStore }) {
     let amount;try{amount=require('./lib/workspaces').money(req.body.amount,true);}catch(e){return res.status(400).json({error:e.message});}
     // Upsert avoids deleting the budget and its linked expense history.
     await db.query(`INSERT INTO budgets (user_id,total_budget,month,year)
-      VALUES ($1,$2,EXTRACT(MONTH FROM CURRENT_DATE),EXTRACT(YEAR FROM CURRENT_DATE))
+      VALUES ($1,$2,EXTRACT(MONTH FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date),EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date))
       ON CONFLICT (user_id,month,year) DO UPDATE SET total_budget=EXCLUDED.total_budget`,
       [req.session.user.user_id, amount]);
     res.redirect('/expenses');
@@ -251,7 +314,7 @@ function createApp({ db, sessionSecret, sessionStore }) {
 
   app.get('/get-budget', requireLogin, async (req, res) => {
     const { rows } = await db.query(`SELECT * FROM budgets WHERE user_id=$1
-      AND month=EXTRACT(MONTH FROM CURRENT_DATE) AND year=EXTRACT(YEAR FROM CURRENT_DATE)`, [req.session.user.user_id]);
+      AND month=EXTRACT(MONTH FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date) AND year=EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date)`, [req.session.user.user_id]);
     res.json(rows[0] || { total_budget: 0 });
   });
 
@@ -263,10 +326,10 @@ function createApp({ db, sessionSecret, sessionStore }) {
   app.get('/remaining-budget', requireLogin, async (req, res) => {
     const { rows } = await db.query(`SELECT b.total_budget::double precision AS total,
       (SELECT COALESCE(SUM(amount),0)::double precision FROM expenses WHERE user_id=$1
-        AND date >= date_trunc('month',CURRENT_DATE)::date
-        AND date < (date_trunc('month',CURRENT_DATE)+INTERVAL '1 month')::date) AS spent
-      FROM budgets b WHERE b.user_id=$1 AND b.month=EXTRACT(MONTH FROM CURRENT_DATE)
-        AND b.year=EXTRACT(YEAR FROM CURRENT_DATE)`, [req.session.user.user_id]);
+        AND date >= date_trunc('month',(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date)::date
+        AND date < (date_trunc('month',(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date)+INTERVAL '1 month')::date) AS spent
+      FROM budgets b WHERE b.user_id=$1 AND b.month=EXTRACT(MONTH FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date)
+        AND b.year=EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date)`, [req.session.user.user_id]);
     if (!rows.length) return res.json({ remaining: 0, totalBudget: 0, hasBudget: false });
     res.json({ remaining: rows[0].total - rows[0].spent, totalBudget: rows[0].total, hasBudget: true });
   });
@@ -288,9 +351,9 @@ function createApp({ db, sessionSecret, sessionStore }) {
     try{
       const categorized = category !== 'uncategorized';
       inserted=await db.query(`INSERT INTO expenses (user_id,budget_id,date,description,amount${categorized?',category':''})
-        SELECT $1,budget_id,COALESCE($4::date,CURRENT_DATE),$2,$3${categorized?',$5':''} FROM budgets WHERE user_id=$1
-        AND month=EXTRACT(MONTH FROM COALESCE($4::date,CURRENT_DATE))
-        AND year=EXTRACT(YEAR FROM COALESCE($4::date,CURRENT_DATE)) RETURNING expense_id,date::text AS date`,
+        SELECT $1,budget_id,COALESCE($4::date,(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date),$2,$3${categorized?',$5':''} FROM budgets WHERE user_id=$1
+        AND month=EXTRACT(MONTH FROM COALESCE($4::date,(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date))
+        AND year=EXTRACT(YEAR FROM COALESCE($4::date,(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date)) RETURNING expense_id,date::text AS date`,
         [req.session.user.user_id,name,amount,date,...(categorized?[category]:[])]);
     }catch(error){if(error.code==='42703')return res.status(503).json({error:'Expense category storage is not set up. Apply the expense-category migration before saving categorized entries.'});throw error;}
     if (wantsJson) {
@@ -314,23 +377,27 @@ function createApp({ db, sessionSecret, sessionStore }) {
 
   app.get('/dashboard-data', requireLogin, async (req, res) => {
     const { rows } = await db.query(`SELECT
-      CURRENT_DATE::text AS "currentDate",
-      EXISTS(SELECT 1 FROM budgets WHERE user_id=$1 AND month=EXTRACT(MONTH FROM CURRENT_DATE)
-        AND year=EXTRACT(YEAR FROM CURRENT_DATE)) AS "hasBudget",
-      (SELECT COUNT(*)::integer FROM habits h WHERE user_id=$1 AND to_jsonb(h)->>'archived_on' IS NULL AND (to_jsonb(h)->'schedule_days' IS NULL OR to_jsonb(h)->'schedule_days' @> to_jsonb(EXTRACT(ISODOW FROM CURRENT_DATE)::integer))) AS "totalHabits",
+      (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date::text AS "currentDate",
+      EXISTS(SELECT 1 FROM budgets WHERE user_id=$1 AND month=EXTRACT(MONTH FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date)
+        AND year=EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date)) AS "hasBudget",
+      (SELECT COUNT(*)::integer FROM habits h WHERE user_id=$1 AND to_jsonb(h)->>'archived_on' IS NULL AND (to_jsonb(h)->'schedule_days' IS NULL OR to_jsonb(h)->'schedule_days' @> to_jsonb(EXTRACT(ISODOW FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date)::integer))) AS "totalHabits",
       (SELECT COUNT(*)::integer FROM habit_logs hl JOIN habits h ON hl.habit_id=h.habit_id
-        WHERE h.user_id=$1 AND hl.date=CURRENT_DATE AND hl.completed_status IS TRUE AND to_jsonb(h)->>'archived_on' IS NULL AND (to_jsonb(h)->'schedule_days' IS NULL OR to_jsonb(h)->'schedule_days' @> to_jsonb(EXTRACT(ISODOW FROM CURRENT_DATE)::integer))) AS completed,
+        WHERE h.user_id=$1 AND hl.date=(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date AND hl.completed_status IS TRUE AND to_jsonb(h)->>'archived_on' IS NULL AND (to_jsonb(h)->'schedule_days' IS NULL OR to_jsonb(h)->'schedule_days' @> to_jsonb(EXTRACT(ISODOW FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date)::integer))) AS completed,
       COALESCE((SELECT total_budget FROM budgets WHERE user_id=$1
-        AND month=EXTRACT(MONTH FROM CURRENT_DATE) AND year=EXTRACT(YEAR FROM CURRENT_DATE)),0)::double precision AS "totalBudget",
+        AND month=EXTRACT(MONTH FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date) AND year=EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date)),0)::double precision AS "totalBudget",
       (SELECT COALESCE(SUM(amount),0)::double precision FROM expenses WHERE user_id=$1
-        AND date >= date_trunc('month',CURRENT_DATE)::date
-        AND date < (date_trunc('month',CURRENT_DATE)+INTERVAL '1 month')::date) AS spent`, [req.session.user.user_id]);
+        AND date >= date_trunc('month',(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date)::date
+        AND date < (date_trunc('month',(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date)+INTERVAL '1 month')::date) AS spent`, [req.session.user.user_id]);
     const { spent, ...summary } = rows[0];
+    const current=await require('./lib/habit-service').currentHabits(db,req.session.user.user_id,summary.currentDate);
+    summary.totalHabits=current.habits.filter(h=>h.due_today).length;
+    summary.completed=current.habits.filter(h=>h.due_today&&h.completed).length;
     // Explicit summary contract: existence comes from the owned monthly budget row,
     // including a valid zero budget, never inferred from the monetary amount.
     res.json({ currentDate: summary.currentDate, hasBudget: summary.hasBudget,
       totalHabits: summary.totalHabits, completed: summary.completed,
-      totalBudget: summary.totalBudget, remaining: summary.totalBudget - spent });
+      totalBudget: summary.totalBudget, remaining: summary.totalBudget - spent,
+      quotas:current.habits.filter(h=>!h.archived_on&&(h.period||h.pending?.recurrence?.mode==='quota')).map(h=>({habit_id:h.habit_id,name:h.habit_name,unit:h.unit,period:h.period,pending:h.pending,status:h.status})) });
   });
 
   app.get('/universal-streak',requireLogin,async(req,res)=>{
@@ -386,9 +453,9 @@ function createApp({ db, sessionSecret, sessionStore }) {
     if(!validDate(end)||typeof habitId!=='string'||!/^\d+$/.test(habitId)||!Number.isSafeInteger(Number(habitId))||Number(habitId)<1)return res.status(400).json({error:'Choose a valid habit and end date.'});
     const {rows:habits}=await db.query('SELECT habit_id,habit_name FROM habits WHERE habit_id=$1 AND user_id=$2',[habitId,req.session.user.user_id]);
     if(!habits.length)return res.status(404).json({error:'Habit not found.'});
-    const {rows:bounds}=await db.query(`SELECT GREATEST('0001-01-01'::date,date_trunc('week',$1::date)::date-175)::text AS start,CURRENT_DATE::text AS today`,[end]);
+    const {rows:bounds}=await db.query(`SELECT GREATEST('0001-01-01'::date,date_trunc('week',$1::date)::date-175)::text AS start,(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date::text AS today`,[end]);
     const {rows}=await db.query(`SELECT hl.date::text AS date FROM habit_logs hl JOIN habits h ON h.habit_id=hl.habit_id
-      WHERE h.user_id=$1 AND h.habit_id=$2 AND hl.completed_status IS TRUE AND hl.date>=$3::date AND hl.date<=$4::date AND hl.date<=CURRENT_DATE ORDER BY hl.date`,[req.session.user.user_id,habitId,bounds[0].start,end]);
+      WHERE h.user_id=$1 AND h.habit_id=$2 AND hl.completed_status IS TRUE AND hl.date>=$3::date AND hl.date<=$4::date AND hl.date<=(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date ORDER BY hl.date`,[req.session.user.user_id,habitId,bounds[0].start,end]);
     res.json({habit:{id:habits[0].habit_id,name:habits[0].habit_name,createdDate:null},startDate:bounds[0].start,endDate:end,currentDate:bounds[0].today,completedDates:rows.map(row=>row.date),streak:null,streakNote:'Streak unavailable: habit start dates and schedules are not recorded.'});
   });
 
@@ -396,7 +463,7 @@ function createApp({ db, sessionSecret, sessionStore }) {
     const { rows } = await db.query(`SELECT u.name,u.user_id,
       COALESCE(SUM(CASE WHEN hl.habit_id IS NOT NULL THEN h.difficulty_score ELSE 0 END),0)::integer AS streak_points
       FROM users u LEFT JOIN habits h ON h.user_id=u.user_id
-      LEFT JOIN habit_logs hl ON hl.habit_id=h.habit_id AND hl.date=CURRENT_DATE
+      LEFT JOIN habit_logs hl ON hl.habit_id=h.habit_id AND hl.date=(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date
       GROUP BY u.user_id,u.name ORDER BY streak_points DESC,u.user_id LIMIT 20`, []);
     res.json({ leaderboard: rows, currentUserId: req.session.user.user_id });
   });

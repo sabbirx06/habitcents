@@ -16,6 +16,7 @@ function buildPoolOptions(env = process.env) {
   if (env.NODE_TLS_REJECT_UNAUTHORIZED === '0') throw new Error('TLS certificate verification must not be disabled');
   return {
     connectionString: env.DATABASE_URL,
+    // A pooler may ignore startup GUCs. Tracking queries explicitly select the Dhaka day.
     options: '-c timezone=Asia/Dhaka',
     ssl: { rejectUnauthorized: true, ...(env.DATABASE_CA_CERT_PATH ? { ca: fs.readFileSync(env.DATABASE_CA_CERT_PATH, 'utf8') } : {}) },
     max: 5,

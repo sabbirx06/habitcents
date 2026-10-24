@@ -1,4 +1,4 @@
-<%- include("partials/head", { title: "Dashboard · HabitCents", css: ["/css/base.css", "/css/dashboard.css", "/css/dashboard-dates.css", "/css/dashboard-modules.css"] }) %>
+<%- include("partials/head", { title: "Dashboard · HabitCents", css: ["/css/base.css", "/css/dashboard.css", "/css/dashboard-dates.css", "/css/dashboard-modules.css", "/css/workspaces.css"] }) %>
 <body class="app-body">
  <%- include("partials/navbar") %>
  <main class="dashboard-shell">
@@ -46,6 +46,7 @@
     <div class="panel-topline"><h2>Today’s habits</h2><span id="habits-count" class="compact-detail"></span></div>
     <ul id="today-habits" class="habit-list" aria-live="polite"><li class="empty-state">Loading your habits…</li></ul>
     <p id="habit-status" class="inline-status" role="status"></p>
+    <details id="period-quotas-section" data-today-only hidden><summary>Current period quotas · separate from Today</summary><ul id="period-quotas" class="habit-list"></ul></details>
     <a class="text-link card-bottom" href="/habits">View all habits <span id="habits-more" class="compact-detail">↗</span></a>
    </article><article class="panel universal-streak-panel" aria-label="Universal day streak"><h2>Streak</h2><p id="streak-asof" class="module-context" hidden></p><p class="streak-figure"><span id="universal-streak">—</span><span>days</span></p><p id="streak-status" class="inline-status" role="status">Loading streak…</p><button id="retry-streak" class="module-retry" type="button" hidden>Retry</button></article></div>
 <section id="history-view" class="history-view" aria-label="Selected-day recorded activity" hidden>
@@ -83,5 +84,5 @@
   <div class="marker-status"><p id="month-status" role="status"></p><button id="retry-month" type="button" hidden>Retry</button></div>
   <ol id="date-rows" class="date-rows" aria-label="Dates; use arrow keys to navigate"></ol>
  </dialog>
- <script type="module">import { initDashboard } from "/js/dashboard.js"; initDashboard();</script>
+ <script src="/js/profile-preferences.js" defer></script><script type="module">import { initDashboard } from "/js/dashboard.js"; initDashboard();</script>
 </body></html>

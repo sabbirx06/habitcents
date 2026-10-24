@@ -36,6 +36,35 @@ test('daily spending aggregates exact owned amounts through selected date withou
  });
 });
 
+test('profile account changes are CSRF protected, owned, persisted and exports are truthful and isolated',async()=>{
+ await withApp(async({db,post,get})=>{
+  await post('/signup',{name:'Profile A',email:'profile-a@test',password:'initial password'});await post('/signup',{name:'Profile B',email:'profile-b@test',password:'initial password'});
+  const cookie=(await post('/login',{email:'profile-a@test',password:'initial password'})).headers.get('set-cookie').split(';')[0];
+  assert.equal((await post('/profile/account',{name:'No session'})).status,302);
+  const page=await get('/profile',cookie),html=await page.text(),token=html.match(/name="csrf-token" content="([^"]+)/)[1];
+  assert.equal((await post('/profile/account',{name:'No csrf'},cookie)).status,403);
+  for(const name of ['   ','x'.repeat(101)]){const invalid=await fetch(new URL('/profile/account',page.url),{method:'POST',headers:{cookie,'Content-Type':'application/json','X-CSRF-Token':token},body:JSON.stringify({name})});assert.equal(invalid.status,400);}
+  const changed=await fetch(new URL('/profile/account',new URL('/profile',page.url)),{method:'POST',headers:{cookie,'Content-Type':'application/json','X-CSRF-Token':token},body:JSON.stringify({name:'  <img src=x> Name  ',user_id:2})});
+  assert.equal(changed.status,200);assert.equal((await changed.json()).user.name,'<img src=x> Name');assert.equal((await db.query('SELECT name FROM users WHERE email=$1',['profile-a@test'])).rows[0].name,'<img src=x> Name');
+  assert.equal((await db.query('SELECT name FROM users WHERE email=$1',['profile-b@test'])).rows[0].name,'Profile B');
+  assert.equal((await get('/profile',cookie)).status,200);assert.match(await(await get('/profile',cookie)).text(),/&lt;img src=x&gt; Name/);
+  const passwordRoute=new URL('/profile/password',page.url),passwordPost=data=>fetch(passwordRoute,{method:'POST',headers:{cookie,'Content-Type':'application/json','X-CSRF-Token':token},body:JSON.stringify(data)});
+  assert.equal((await passwordPost({currentPassword:'initial password',newPassword:'new secret',confirmPassword:'different'})).status,400);
+  assert.equal((await passwordPost({currentPassword:'wrong',newPassword:'new secret',confirmPassword:'new secret'})).status,403);
+  assert.equal((await passwordPost({currentPassword:'initial password',newPassword:'new secret',confirmPassword:'new secret'})).status,200);
+  assert.notEqual((await post('/login',{email:'profile-a@test',password:'initial password'})).headers.get('location'),'/dashboard');assert.equal((await post('/login',{email:'profile-a@test',password:'new secret'})).headers.get('location'),'/dashboard');
+  await db.query("INSERT INTO habits(habit_id,user_id,habit_name,difficulty_score) VALUES (11,1,'Owner habit',3),(22,2,'Private habit',2)");
+  await db.query("INSERT INTO habit_logs(habit_id,date,completed_status) VALUES (11,'2024-01-01',true),(22,'2024-01-01',true)");
+  await db.query("INSERT INTO budgets(user_id,total_budget,month,year) VALUES (1,100,1,2024),(2,200,1,2024)");
+  await db.query("INSERT INTO savings_goals(user_id,name,saved_amount,target_amount) VALUES (1,'Owner goal',5,50),(2,'Private goal',9,90)");
+  await db.query("INSERT INTO expenses(user_id,date,description,amount) VALUES (1,'2024-01-01',$1,12.30),(2,'2024-01-01','Private expense',999)",["=SUM(1,2),\"quote\"\nUnicode ☃"]);
+  const expenses=await get('/profile/export/expenses',cookie),csv=await expenses.text();assert.equal(expenses.status,200);assert.match(expenses.headers.get('content-disposition'),/habitcents-expenses.csv/);assert.match(expenses.headers.get('cache-control'),/no-store/);assert.match(csv,/"'=SUM\(1,2\),""quote""\nUnicode ☃"/);assert.doesNotMatch(csv,/private/);
+  const habitCsvResponse=await get('/profile/export/habits',cookie),habitCsv=await habitCsvResponse.text();assert.equal(habitCsvResponse.status,200);assert.match(habitCsv,/Owner habit/);assert.doesNotMatch(habitCsv,/Private/);
+  const jsonResponse=await get('/profile/export/json',cookie),json=await jsonResponse.json();assert.equal(jsonResponse.status,200,JSON.stringify(json));assert.equal(json.schemaVersion,1);assert.equal(json.datasets.expenses.length,1);assert.equal(json.datasets.expenses[0].amount,'12.30');assert.equal(json.datasets.habits.length,1);assert.equal(json.datasets.habitHistory.length,1);assert.equal(json.datasets.budgets.length,1);assert.equal(json.datasets.savingsGoals.length,1);assert.equal(JSON.stringify(json).includes('password'),false);assert.ok(json.warnings.some(x=>x.includes('Recurring-expense')));
+  assert.equal((await get('/profile/export/json')).status,302);
+ });
+});
+
 test('all migrated routes execute PostgreSQL SQL and preserve frontend contracts', async () => {
   const source = fs.readFileSync(path.join(__dirname, '../server.js'), 'utf8');
   assert.equal(/CURDATE\(|MONTH\(date\)|VALUES \(\?/.test(source), false, 'MySQL SQL must be adapted');
@@ -277,7 +306,7 @@ test('universal streak storage is forward-only, atomic with current habit change
   const clock=(await db.query("SELECT CURRENT_DATE::text AS today,(CURRENT_DATE-1)::text AS yesterday,(CURRENT_DATE-2)::text AS start")).rows[0];
   await post('/add-habit',{name:'One',difficulty:2},cookie);await post('/add-habit',{name:'Two',difficulty:9},cookie);
   const habits=await(await get('/get-habits',cookie)).json();
-  await db.query("INSERT INTO universal_streak_enrollments(user_id,starts_on,empty_day_policy,day_change_policy,time_zone,policies_confirmed,capture_version) VALUES (1,$1,'reset','apply','UTC',true,1)",[clock.start]);
+  await db.query("INSERT INTO universal_streak_enrollments(user_id,starts_on,empty_day_policy,day_change_policy,time_zone,policies_confirmed,capture_version) VALUES (1,$1,'reset','apply','Asia/Dhaka',true,1)",[clock.start]);
   assert.equal((await read()).count,null,'no initial snapshot means no invented past streak');
   for(const day of [clock.start,clock.yesterday]){
    await db.query('INSERT INTO universal_streak_days(user_id,day,requirements_complete) VALUES (1,$1,true)',[day]);
@@ -296,6 +325,7 @@ test('universal streak storage is forward-only, atomic with current habit change
   assert.equal((await get('/universal-streak?date=2023-02-29',cookie)).status,400);
   await db.query('DELETE FROM universal_streak_days WHERE user_id=1 AND day=$1',[clock.yesterday]);
   assert.equal((await read()).count,1,'closed day without captured activity carries known requirements with zero completions');
-  await db.query("SET TIME ZONE 'Pacific/Kiritimati'");assert.equal((await read()).reason,'timezone-review-required');
+  await db.query("SET TIME ZONE 'Pacific/Kiritimati'");assert.equal((await read()).count,1,'session zone cannot redefine tracking days');
+  await db.query("UPDATE universal_streak_enrollments SET time_zone='UTC' WHERE user_id=1");assert.equal((await read()).reason,'timezone-review-required');
  });
 });

@@ -13,7 +13,7 @@ function sql(target = email) {
 async function fixture() {
   const db = new PGlite();
   await db.exec(fs.readFileSync(path.join(root, 'schema.postgres.sql'), 'utf8'));
-  await db.exec("SET TIME ZONE 'UTC'");
+  await db.exec("SET TIME ZONE 'Asia/Dhaka'");
   // Synthetic local-only account, not a usable password or a Supabase Auth account.
   await db.query('INSERT INTO users(name,email,password) VALUES ($1,$2,$3),($4,$5,$6)',
     ['Fixture owner',email,'NOT_A_LOGIN_HASH','Other account','other@example.invalid','NOT_A_LOGIN_HASH']);

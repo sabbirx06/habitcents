@@ -33,4 +33,5 @@
 
     <!-- Favicon for browser tab -->
     <link rel="icon" href="/media/favicon.svg" type="image/svg+xml" />
+    <% if (typeof csrfToken !== 'undefined') { %><meta name="csrf-token" content="<%= csrfToken %>" /><% } %>
   </head>

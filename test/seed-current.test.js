@@ -13,7 +13,7 @@ async function fixture(migrated=false){
  if(!migrated) schema=schema.replace(/^    category VARCHAR\(32\).*\n/m,'');
  await db.exec(schema);
  if(migrated) await db.exec(read('migrations/002-universal-streak-draft.sql'));
- await db.exec(`SET TIME ZONE 'UTC';
+ await db.exec(`SET TIME ZONE 'Asia/Dhaka';
  INSERT INTO users(name,email,password) VALUES('Demo','demo@example.invalid','NOT_A_LOGIN_HASH'),('Other','other@example.invalid','NOT_A_LOGIN_HASH');
  INSERT INTO habits(user_id,habit_name,difficulty_score,category) VALUES(2,'Keep habit',4,'healthy');
  INSERT INTO habit_logs(habit_id,date) VALUES(1,CURRENT_DATE-1);
@@ -126,7 +126,7 @@ test('seed timezone is transaction-local and configurable to an exact app sessio
   assert.equal((await readUniversalStreak(db,1)).count,5);
  }finally{await db.close();}
  const other=await fixture(false);try{
-  await other.exec("SET TIME ZONE 'Asia/Dhaka'");await other.exec(seed());
+  await other.exec("SET TIME ZONE 'Asia/Dhaka'");await other.exec(seed().replace("SET LOCAL TIME ZONE 'Asia/Dhaka'","SET LOCAL TIME ZONE 'UTC'"));
   assert.equal((await other.query("SELECT current_setting('TimeZone') AS zone")).rows[0].zone,'Asia/Dhaka');
   assert.equal((await other.query('SELECT time_zone FROM universal_streak_enrollments WHERE user_id=1')).rows[0].time_zone,'UTC');
  }finally{await other.close();}
@@ -190,7 +190,9 @@ test('actual capture service completes and undoes today, and timezone mismatch s
   await captureUniversalDay(db,1);assert.equal((await readUniversalStreak(db,1)).count,6);
   await db.exec('DELETE FROM habit_logs WHERE habit_id=(SELECT MIN(habit_id) FROM habits WHERE user_id=1) AND date=CURRENT_DATE');
   await captureUniversalDay(db,1);assert.equal((await readUniversalStreak(db,1)).count,5);
-  await db.exec("SET TIME ZONE 'Asia/Dhaka'");
+  await db.exec("SET TIME ZONE 'UTC'");
+  assert.equal((await readUniversalStreak(db,1)).count,5);
+  await db.query("UPDATE universal_streak_enrollments SET time_zone='UTC' WHERE user_id=1");
   assert.equal((await readUniversalStreak(db,1)).reason,'timezone-review-required');
  }finally{await db.close();}
 });

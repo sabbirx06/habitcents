@@ -142,6 +142,9 @@ function renderBudget(total) {
         ? "Over budget by " + money(-remaining / 100)
         : Math.round(p) + "% remaining";
   $('#budget-warning').setAttribute('aria-label',budget === null ? 'No monthly budget set' : remaining < 0 ? 'Over budget by '+money(-remaining/100) : Math.round(p)+'% remaining');
+  const todayTotal = amountCents(data.todayTotal ?? 0);
+  $('#expense-today-spent').setAttribute('aria-label', money(todayTotal / 100));
+  moneyMetric($('#expense-today-spent'), 'expense-today', todayTotal / 100);
 }
 function renderChart(series) {
   const days = monthDays(month).filter((d) => d <= data.today),
@@ -404,9 +407,9 @@ export async function loadExpenses() {
     status("#expenses-status", "");
   } catch (e) {
     if (token !== generation) return;
-    cancelMetric('expense-budget');cancelMetric('expense-spent');
+    cancelMetric('expense-budget');cancelMetric('expense-spent');cancelMetric('expense-today');
     data = null;
-    for (const s of ["#monthly-budget", "#expense-budget-total", "#expense-budget-spent"])
+    for (const s of ["#monthly-budget", "#expense-budget-total", "#expense-budget-spent", "#expense-today-spent"])
       { $(s).textContent = "—";$(s).removeAttribute('aria-label'); }
     for (const s of [
       "#expense-list",
