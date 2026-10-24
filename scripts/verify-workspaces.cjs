@@ -238,10 +238,10 @@ const base = "http://127.0.0.1:3001";
       'document.querySelector("#recurring-list").textContent.includes("Browser subscription")',
     );
     await evaluate(
-      'Array.from(document.querySelectorAll(".recurring-row")).find(r=>r.textContent.includes("Browser subscription")).querySelectorAll("button")[1].click()',
+      'Array.from(document.querySelectorAll(".recurring-row")).find(r=>r.textContent.includes("Browser subscription")).querySelector("[aria-label^=\\\"Record payment due\\\"]").click()',
     );
     await submit();
-    await wait('document.querySelector("#recurring-list").textContent.includes("Next due")');
+    await wait('document.querySelector("#recurring-list").textContent.includes("Due ")');
     await go("/savings?scenario=populated");
     await wait('document.querySelectorAll(".goal-card").length===2');
     await screenshot("workspaces-savings-desktop");

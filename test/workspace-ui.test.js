@@ -83,10 +83,24 @@ test("habit summaries retain direct actions and expenses retain transaction filt
   assert.match(habits, /habit-streak-card/);
   assert.doesNotMatch(habits, /id="habit-presets"/);
   assert.match(habits, /id="habit-new" class="page-header-action habit-new-action"/);
+  assert.doesNotMatch(habits, /Choose a preset|Browse presets|Explore presets|preset library/i);
+  assert.doesNotMatch(fs.readFileSync("public/js/habits.js", "utf8"), /Choose a preset/);
   assert.doesNotMatch(habits, /workspace-streak/);
   assert.doesNotMatch(habits, /id="habit-options"|id="habit-controls"|Manage categories/);
   assert.match(habits, /habit-completion-card/);
   const expenses = await render("expenses");
+  const workspaceStart = expenses.indexOf('<div class="expense-workspace">'),
+    budgetAt = expenses.indexOf("expense-budget", workspaceStart),
+    monthAt = expenses.indexOf('id="expense-budget-spent"', workspaceStart),
+    recurringAt = expenses.indexOf("expense-recurring", workspaceStart);
+  assert.ok(workspaceStart < budgetAt && budgetAt < monthAt && monthAt < recurringAt);
+  assert.doesNotMatch(expenses, /expense-today|Spent today|expense-summary-row|expense-spending-stack/);
+  for (const id of ["monthly-budget", "expense-budget-spent", "calendar-open", "recurring-list", "recurring-status", "recurring-retry"])
+    assert.equal((expenses.match(new RegExp(`id="${id}"`, "g")) || []).length, 1, `${id} must stay unique`);
+  assert.match(expenses, /id="budget-edit" class="workspace-text-button"/);
+  assert.match(expenses, /id="calendar-open" class="workspace-button secondary small"/);
+  assert.match(expenses, /<details class="recurring-help">/);
+  assert.match(expenses, /<summary>Payment confirmation<\/summary>/);
   assert.match(
     expenses,
     /id="transaction-options"[^>]*aria-label="Search and filter transactions"/,
@@ -121,6 +135,14 @@ test("expense aggregation reconciles precise daily and category totals without i
   assert.equal(totals.byCategory.get("uncategorized"), 1235);
   assert.equal(aggregateExpenses([]).total, 0);
   assert.throws(() => aggregateExpenses([{ amount: "invalid" }]));
+});
+test("recurring expense rows keep accessible edit and payment-confirmation actions", () => {
+  const source = fs.readFileSync("public/js/expenses.js", "utf8");
+  assert.match(source, /recurringAction\("Edit " \+ r\.name/);
+  assert.match(source, /recurringAction\("Record payment due " \+ dueLabel/);
+  assert.match(source, /api\("\/api\/recurring\/confirm"/);
+  assert.match(source, /await Promise\.all\(\[loadExpenses\(\), loadRecurring\(\)\]\)/);
+  assert.match(source, /"aria-label": label/);
 });
 test("savings summary excludes archived balances and preserves completed goals until explicitly archived", async () => {
   const { summarizeGoals } = await load("savings");

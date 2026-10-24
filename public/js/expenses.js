@@ -142,9 +142,6 @@ function renderBudget(total) {
         ? "Over budget by " + money(-remaining / 100)
         : Math.round(p) + "% remaining";
   $('#budget-warning').setAttribute('aria-label',budget === null ? 'No monthly budget set' : remaining < 0 ? 'Over budget by '+money(-remaining/100) : Math.round(p)+'% remaining');
-  const todayTotal = amountCents(data.todayTotal ?? 0);
-  $('#expense-today-spent').setAttribute('aria-label', money(todayTotal / 100));
-  moneyMetric($('#expense-today-spent'), 'expense-today', todayTotal / 100);
 }
 function renderChart(series) {
   const days = monthDays(month).filter((d) => d <= data.today),
@@ -407,9 +404,9 @@ export async function loadExpenses() {
     status("#expenses-status", "");
   } catch (e) {
     if (token !== generation) return;
-    cancelMetric('expense-budget');cancelMetric('expense-spent');cancelMetric('expense-today');
+    cancelMetric('expense-budget');cancelMetric('expense-spent');
     data = null;
-    for (const s of ["#monthly-budget", "#expense-budget-total", "#expense-budget-spent", "#expense-today-spent"])
+    for (const s of ["#monthly-budget", "#expense-budget-total", "#expense-budget-spent"])
       { $(s).textContent = "—";$(s).removeAttribute('aria-label'); }
     for (const s of [
       "#expense-list",
@@ -482,6 +479,34 @@ function recurringEditor(r = {}) {
     { submit: r.recurring_id ? 'Save recurring expense' : 'Create recurring expense' },
   );
 }
+function recurringInitials(name) {
+  const parts = String(name || "?").trim().split(/\s+/).filter(Boolean);
+  return (parts.length > 1 ? parts[0][0] + parts[1][0] : (parts[0] || "?").slice(0, 2)).toUpperCase();
+}
+function recurringDateLabel(date, today) {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    ...(String(year) !== today.slice(0, 4) ? { year: "numeric" } : {}),
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+function recurringAction(label, path, action) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"),
+    iconPath = document.createElementNS(svg.namespaceURI, "path");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  iconPath.setAttribute("d", path);
+  svg.append(iconPath);
+  return node("button", {
+    type: "button",
+    class: "recurring-icon-action",
+    "aria-label": label,
+    title: label,
+    onclick: action,
+  }, svg);
+}
 async function loadRecurring() {
   const token = ++recurringGeneration;
   status("#recurring-status", "Loading recurring expenses…");
@@ -493,36 +518,18 @@ async function loadRecurring() {
       ...response.definitions.map((r) => {
         const due =
           r.enabled && r.next_due <= response.today && (!r.ends_on || r.next_due <= r.ends_on);
-        const row = node(
-          "div",
-          { class: "recurring-row" },
-          node(
-            "div",
-            {},
-            node("strong", {}, r.name),
-            node(
-              "p",
-              { class: "workspace-muted" },
-              money(r.amount) +
-                " · " +
-                r.frequency +
-                " · " +
-                (r.enabled ? "Next due " + r.next_due : "Disabled"),
-            ),
-          ),
-          node(
-            "div",
-            { class: "recurring-actions" },
-            button("Edit", () => recurringEditor(r), true),
+        const dueLabel = recurringDateLabel(r.next_due, response.today),
+          actions = node("div", { class: "recurring-actions" },
+            recurringAction("Edit " + r.name, "M4 16.5V20h3.5L18 9.5 14.5 6 4 16.5zM13.5 7l3.5 3.5", () => recurringEditor(r)),
             due
-              ? button("Confirm payment", () =>
+              ? recurringAction("Record payment due " + dueLabel, "M20 6 9 17l-5-5", () =>
                   editor(
                     "Confirm payment",
                     [
                       node(
                         "p",
                         { class: "full" },
-                        r.name + " · " + money(r.amount) + " · scheduled " + r.next_due,
+                        r.name + " · " + money(r.amount) + " · scheduled " + dueLabel,
                       ),
                       field("Actual payment date", "date", "date", response.today, {
                         required: "",
@@ -543,7 +550,12 @@ async function loadRecurring() {
                 )
               : null,
           ),
-        );
+          row = node("div", { class: "recurring-row" },
+            node("span", { class: "recurring-service-icon", "aria-hidden": "true" }, recurringInitials(r.name)),
+            node("div", { class: "recurring-name" }, node("strong", {}, r.name)),
+            node("div", { class: "recurring-meta" }, node("strong", {}, money(r.amount)), node("span", {}, r.enabled ? "Due " + dueLabel : "Disabled")),
+            actions,
+          );
         return row;
       }),
     );

@@ -247,7 +247,6 @@ function habitEditor(h = {}) {
   const {form}=editor(h.habit_id?'Edit habit':'New habit',[
     name,preview,tracking,unitKind,quantityFields,duration,repeat,mode,days,weekday,anchorDay,anchorMonth,start,activationNote,summary,icon,color,
     disclosure('Description and category',[description,category],!!(h.description||h.category)),
-    ...(!h.habit_id&&state?[node('div',{class:'form-preset-row full'},button('Choose a preset',presets,true))]:[]),
   ],async(values,form)=>{
     const frequency=values.repeat,nonDaily=['weekly','monthly','yearly'].includes(frequency),scheduleMode=nonDaily?values.schedule_mode:'scheduled';
     const schedule=frequency==='weekdays'?[...form.querySelectorAll('[name=weekday]:checked')].map(n=>Number(n.value)):[1,2,3,4,5,6,7];
@@ -639,7 +638,7 @@ function renderHabits() {
       node(
         "p",
         { class: "workspace-empty" },
-        "No habits in this view. Create a habit or explore the preset library.",
+        "No habits yet. Create your first habit.",
       ),
     );
 }
