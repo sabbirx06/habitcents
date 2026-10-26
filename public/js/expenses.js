@@ -8,7 +8,6 @@ import {
   localDay,
   button,
   field,
-  selectField,
   categoryField,
   categories,
   editor,
@@ -75,7 +74,7 @@ function editExpense(expense = {}) {
               async () => {
                 await api("/delete-expense", { expense_id: expense.expense_id });
                 notifyChange();
-                await loadExpenses();
+                await Promise.all([loadExpenses(),expense.recurring_id?loadRecurring():null]);
               },
             ),
           true,
@@ -88,7 +87,7 @@ function editExpense(expense = {}) {
     async (values) => {
       await api("/api/expenses/save", { ...values, expense_id: expense.expense_id });
       notifyChange();
-      await loadExpenses();
+      await Promise.all([loadExpenses(),expense.recurring_id?loadRecurring():null]);
     },
     { extra, submit: expense.expense_id ? 'Save expense' : 'Add expense' },
   );
@@ -444,12 +443,21 @@ export async function loadExpenses() {
   }
 }
 function recurringEditor(r = {}) {
-  const service = selectField("Service", "service", [["custom", "Custom name"], ["Netflix", "Netflix"], ["Spotify", "Spotify"], ["YouTube Premium", "YouTube Premium"], ["Apple Music", "Apple Music"], ["Google One", "Google One"], ["Dropbox", "Dropbox"], ["Amazon Prime", "Amazon Prime"], ["Other", "Other service"]], r.name && ["Netflix", "Spotify", "YouTube Premium", "Apple Music", "Google One", "Dropbox", "Amazon Prime"].includes(r.name) ? r.name : "custom");
-  const nameField = field("Custom service or subscription name", "name", "text", r.name, { required: "", maxlength: 255 });
-  const form = editor(
+  const nameField = field("Name", "name", "text", r.name, { required: "", maxlength: 255 });
+  nameField.classList.add('full');
+  const remove = r.recurring_id ? button('Delete',()=>confirmAction(
+    'Delete recurring expense',
+    'Delete “'+r.name+'”? Recorded payments will stay.',
+    async()=>{
+      await api('/api/recurring/delete',{recurring_id:r.recurring_id});
+      notifyChange();
+      await loadRecurring();
+    },
+  ),true) : null;
+  remove?.classList.add('danger');
+  const {form} = editor(
     r.recurring_id ? "Edit recurring expense" : "New recurring expense",
     [
-      service,
       nameField,
       field("Amount · Tk", "amount", "number", r.amount, {
         required: "",
@@ -470,39 +478,18 @@ function recurringEditor(r = {}) {
       ),
       calendarField("Starts on", "starts_on", r.starts_on || localDay(), { required: "" }),
       calendarField("Ends on (optional)", "ends_on", r.ends_on),
-      selectField(
-        "Status",
-        "enabled",
-        [
-          ["true", "Enabled"],
-          ["false", "Disabled"],
-        ],
-        r.enabled === false ? "false" : "true",
-      ),
     ],
     async (values) => {
       await api("/api/recurring/save", {
         ...values,
-        enabled: values.enabled === "true",
+        enabled: r.enabled !== false,
         recurring_id: r.recurring_id,
       });
       await loadRecurring();
     },
-    { submit: r.recurring_id ? 'Save recurring expense' : 'Create recurring expense' },
+    { submit: r.recurring_id ? 'Save recurring expense' : 'Create recurring expense', extra: remove ? [remove] : [] },
   );
-  const serviceSelect = form.querySelector('[name="service"]'), nameInput = form.querySelector('[name="name"]');
-  const syncService = () => { const custom = serviceSelect.value === "custom" || serviceSelect.value === "Other"; nameInput.disabled = !custom; nameInput.required = custom; if (!custom) nameInput.value = serviceSelect.value; };
-  serviceSelect.addEventListener("change", syncService); syncService();
-}
-function recurringInitials(name) {
-  const parts = String(name || "?").trim().split(/\s+/).filter(Boolean);
-  return (parts.length > 1 ? parts[0][0] + parts[1][0] : (parts[0] || "?").slice(0, 2)).toUpperCase();
-}
-function recurringServiceMark(name) {
-  const marks = { Netflix: { text: "N", color: "#e50914" }, Spotify: { text: "≋", color: "#1b7f43" }, "YouTube Premium": { text: "▶", color: "#d11a1a" }, "Apple Music": { text: "♪", color: "#ba4c8f" }, "Google One": { text: "1", color: "#4285f4" }, Dropbox: { text: "◇", color: "#1769ff" }, "Amazon Prime": { text: "a", color: "#1769aa" } };
-  const mark = marks[name];
-  if (!mark) return document.createTextNode(recurringInitials(name));
-  return node("span", { class: "recurring-brand-mark", "aria-hidden": "true", style: "color:" + mark.color }, mark.text);
+  form.classList.add('recurring-editor-form');
 }
 function recurringDateLabel(date, today) {
   const [year, month, day] = date.split("-").map(Number);
@@ -571,10 +558,14 @@ async function loadRecurring() {
                 )
               : null,
           ),
+          settled=!!r.last_paid_on&&(!r.enabled||r.next_due>response.today),
           row = node("div", { class: "recurring-row" },
-            node("span", { class: "recurring-service-icon", "aria-hidden": "true" }, recurringServiceMark(r.name)),
-            node("div", { class: "recurring-name" }, node("strong", {}, r.name)),
-            node("div", { class: "recurring-meta" }, node("strong", {}, money(r.amount)), node("span", {}, r.enabled ? "Due " + dueLabel : "Disabled")),
+            node("div", { class: "recurring-name" }, node("strong", {}, r.name),
+              node('span',{class:'recurring-payment-state','data-paid':String(settled),
+                ...(r.last_paid_for?{title:'Payment for '+recurringDateLabel(r.last_paid_for,response.today)}:{}),
+              },r.last_paid_on?(settled?'Paid ':'Last paid ')+recurringDateLabel(r.last_paid_on,response.today):'Unpaid')),
+            node("span", { class: "recurring-due" }, r.enabled ? "Due " + dueLabel : "Disabled"),
+            node("div", { class: "recurring-meta" }, node("strong", {}, money(r.amount))),
             actions,
           );
         return row;

@@ -8,12 +8,20 @@ test('preview records upcoming recurring bills early and rejects duplicate confi
   const today=(await(await fetch(base+'/api/recurring')).json()).today,start=(Number(today.slice(0,4))+1)+'-01-01';
   assert.equal((await post('/api/recurring/save',{name:'Early bill',amount:'12.35',category:'subscriptions',frequency:'monthly',starts_on:start,enabled:true})).status,200);
   const r=(await(await fetch(base+'/api/recurring')).json()).definitions.find(r=>r.name==='Early bill');
+  assert.equal(r.last_paid_on,null);
   const body={recurring_id:r.recurring_id,scheduled_for:start,date:today};
   assert.equal((await post('/api/recurring/confirm',body)).status,200);
   assert.equal((await post('/api/recurring/confirm',body)).status,409);
+  const updated=(await(await fetch(base+'/api/recurring')).json()).definitions.find(item=>item.recurring_id===r.recurring_id);
+  assert.equal(updated.last_paid_on,today);assert.equal(updated.last_paid_for,start);
   const expenses=await(await fetch(base+'/get-expenses')).json();
   assert.equal(expenses.filter(e=>e.recurring_id===r.recurring_id).length,1);
   assert.equal(expenses.find(e=>e.recurring_id===r.recurring_id).date,today);
+  const paid=expenses.find(e=>e.recurring_id===r.recurring_id);
+  assert.equal((await post('/api/recurring/delete',{recurring_id:r.recurring_id})).status,200);
+  assert.equal((await post('/api/recurring/delete',{recurring_id:r.recurring_id})).status,404);
+  const retained=(await(await fetch(base+'/get-expenses')).json()).find(e=>e.expense_id===paid.expense_id);
+  assert.deepEqual(retained,{...paid,recurring_id:null});
  });
 });
 

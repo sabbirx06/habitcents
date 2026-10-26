@@ -4,6 +4,8 @@
 .workspace-form .workspace-label,.workspace-form legend { font-size:.88rem;font-weight:500;margin-bottom:.4rem; }
 .workspace-form .actions { align-items:center;margin-top:.2rem; }
 .workspace-form .actions button { min-height:44px; }
+.workspace-form .actions .danger { margin-right:auto; }
+.workspace-form.recurring-editor-form { grid-template-columns:repeat(2,minmax(0,1fr)); }
 .choice-field { border:0;padding:0;margin:0;min-inline-size:0; }
 .choice-options { display:flex;flex-wrap:wrap;gap:6px; }
 .choice-options label { position:relative;display:flex;align-items:center;justify-content:center;gap:.5rem;min-height:44px;padding:.55rem .85rem;border:1px solid var(--line);border-radius:12px;background:#eeece4;cursor:pointer;transition:background-color var(--motion-control,190ms) var(--ease-out,ease-out),border-color var(--motion-control,190ms),box-shadow var(--motion-control,190ms); }
@@ -64,3 +66,4 @@
 .habit-choice-strip .choice-options label { flex:0 0 44px;min-width:44px;min-height:44px;padding:6px; }
 .habit-choice-strip .choice-options label>span:last-child { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap; }
 @media(max-width:520px) { .workspace-dialog { padding:1rem; }.workspace-form { grid-template-columns:minmax(0,1fr); }.choice-field.category-choices .choice-options { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media(max-width:360px) { .workspace-form.recurring-editor-form { grid-template-columns:minmax(0,1fr); } }

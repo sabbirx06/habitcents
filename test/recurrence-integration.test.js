@@ -17,12 +17,34 @@ async function fixture(run){
  try{await run({db,query,post,get,login,clock:v=>instant=v});}finally{await new Promise(r=>server.close(r));await db.close();}
 }
 const habit=(extra={})=>({name:'Gym',schedule_days:[1,2,3,4,5,6,7],target:'3',unit:'visits',tracking:'count',recurrence:{frequency:'weekly',mode:'quota'},...extra});
+test('recurring payment status follows the latest scheduled payment and reflects edited or deleted transactions',()=>fixture(async({post,get,login})=>{
+ const cookie=await login(),other=await login('other@test');
+ await post('/api/budget',{month:'2026-10',amount:'500'},cookie);
+ await post('/api/recurring/save',{name:'Internet',amount:'10',frequency:'monthly',starts_on:'2026-10-01'},cookie);
+ const record=async()=>(await(await get('/api/recurring',cookie)).json()).definitions[0];
+ const r=await record();assert.equal(r.last_paid_on,null);
+ const pay=(scheduled_for,date)=>post('/api/recurring/confirm',{recurring_id:r.recurring_id,scheduled_for,date},cookie);
+ assert.equal((await pay('2026-10-01','2026-10-24')).status,200);
+ assert.equal((await pay('2026-11-01','2026-10-23')).status,200);
+ let updated=await record();assert.equal(updated.last_paid_for,'2026-11-01');assert.equal(updated.last_paid_on,'2026-10-23');
+ assert.deepEqual((await(await get('/api/recurring',other)).json()).definitions,[]);
+ const expenses=(await(await get('/api/expenses?month=2026-10',cookie)).json()).expenses;
+ const latest=expenses.find(e=>e.date==='2026-10-23');assert.equal(latest.recurring_id,r.recurring_id);
+ assert.equal((await post('/api/expenses/save',{expense_id:latest.expense_id,name:'Internet',amount:'10',date:'2026-10-22',category:'subscriptions'},cookie)).status,200);
+ assert.equal((await record()).last_paid_on,'2026-10-22');
+ assert.equal((await post('/delete-expense',{expense_id:latest.expense_id},cookie)).status,200);
+ updated=await record();assert.equal(updated.last_paid_for,'2026-10-01');assert.equal(updated.last_paid_on,'2026-10-24');
+ const first=expenses.find(e=>e.expense_id!==latest.expense_id);
+ assert.equal((await post('/delete-expense',{expense_id:first.expense_id},cookie)).status,200);
+ updated=await record();assert.equal(updated.last_paid_on,null);assert.equal(updated.last_paid_for,null);
+}));
 test('upcoming recurring payments can be paid early once, against the actual payment month',()=>fixture(async({db,post,get,login})=>{
  const cookie=await login(),other=await login('other@test');
  await post('/api/budget',{month:'2026-10',amount:'500'},cookie);
  const created=await post('/api/recurring/save',{name:'Early bill',amount:'12.35',frequency:'monthly',starts_on:'2026-11-01',ends_on:'2026-11-01',enabled:true},cookie);
  assert.equal(created.status,200);
  const r=(await(await get('/api/recurring',cookie)).json()).definitions[0];
+ assert.equal(r.last_paid_on,null);assert.equal(r.last_paid_for,null);
  const body={recurring_id:r.recurring_id,scheduled_for:r.next_due,date:'2026-10-25'};
  assert.equal((await post('/api/recurring/confirm',body,other)).status,404);
  assert.equal((await post('/api/recurring/confirm',{...body,date:'2026-10-26'},cookie)).status,409);
@@ -34,6 +56,16 @@ test('upcoming recurring payments can be paid early once, against the actual pay
  assert.equal(Number(rows[0].amount),12.35);assert.equal(rows[0].month,10);assert.equal(rows[0].year,2026);
  const updated=(await(await get('/api/recurring',cookie)).json()).definitions[0];
  assert.equal(updated.next_due,'2026-12-01');assert.equal(updated.enabled,false);
+ assert.equal(updated.last_paid_on,'2026-10-25');assert.equal(updated.last_paid_for,'2026-11-01');
+ const before=(await db.query('SELECT * FROM expenses WHERE recurring_id=$1',[r.recurring_id])).rows[0];
+ assert.equal((await post('/api/recurring/delete',{recurring_id:r.recurring_id},other)).status,404);
+ assert.equal((await post('/api/recurring/delete',{recurring_id:'invalid'},cookie)).status,400);
+ assert.equal((await post('/api/recurring/delete',{recurring_id:r.recurring_id},cookie)).status,200);
+ assert.equal((await post('/api/recurring/delete',{recurring_id:r.recurring_id},cookie)).status,404);
+ assert.deepEqual((await(await get('/api/recurring',cookie)).json()).definitions,[]);
+ const after=(await db.query('SELECT * FROM expenses WHERE expense_id=$1',[before.expense_id])).rows[0];
+ assert.deepEqual(after,{...before,recurring_id:null});
+ assert.equal((await post('/api/recurring/confirm',body,cookie)).status,404);
 }));
 test('quota activation, daily totals, pending changes, rollover and isolation execute real routes',()=>fixture(async({db,post,get,login,clock})=>{
  const cookie=await login(),other=await login('b@test');
