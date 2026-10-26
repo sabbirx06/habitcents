@@ -19,12 +19,11 @@ function editorFixture(today){
  }
  const node=(tag,attrs={},...children)=>new Element(tag,attrs,children);
  const field=(label,name,type,value,attrs={})=>node('label',{},node('span',{class:'workspace-label'},label),node('input',{name,type,value,...attrs}));
- const choiceField=(label,name,choices,value)=>node('fieldset',{},node('legend',{},label),choices.map(([key,title])=>node('label',{},node('input',{name,type:'radio',value:key,...(key===value?{checked:''}:{})}),title)));
+ const choiceField=(label,name,choices,value,variant='segments')=>node('fieldset',{class:variant},node('legend',{},label),node('div',{class:'choice-options'},choices.map(([key,title])=>node('label',{},node('input',{name,type:'radio',value:key,...(key===value?{checked:''}:{})}),title))));
  const selectField=(label,name,options,value)=>node('label',{},node('span',{},label),node('select',{name,value}));
  let form,save;const requests=[];
  const context={HabitRecurrence:require('../public/js/recurrence'),HabitIcons:{tile:()=>node('span',{})},node,field,choiceField,selectField,
-  durationField:(value,name)=>node('div',{},field('Minutes',name,'number',value)),
-  button:(label,run)=>node('button',{onclick:run},label),disclosure:(_,children)=>node('div',{},children),
+  button:(label,run)=>node('button',{onclick:run},label),
   editor:(_,children,run)=>{form=node('form',{},children);save=run;return {form};},
   api:async(url,body)=>{requests.push({url,body});return {};},notifyChange(){},Event:class{constructor(type){this.type=type;}},document:{},
  };
@@ -46,4 +45,38 @@ test('habit editor preserves minutes and selected weekdays and displays pending 
  assert.equal(ui.requests[0].body.target,'20');assert.equal(ui.requests[0].body.unit,'minutes');assert.deepEqual(Array.from(ui.requests[0].body.schedule_days),[1,3]);
  const old={habit_id:10,habit_name:'Gym',tracking:'count',target:3,unit:'visits',recurrence:{frequency:'weekly',mode:'quota'},pending:{effective_on:'2026-10-26',target:5,unit:'visits',tracking:'count',schedule_days:[1,2,3,4,5,6,7],recurrence:{frequency:'weekly',mode:'quota'}}};
  ui.open(old);assert.match(ui.form.textContent,/current period’s rule and progress stay unchanged/);assert.equal(ui.form.querySelector('[name=target]').value,'5');assert.equal(old.target,3);
+});
+test('compact habit editor saves typed targets and units without clearing existing metadata',async()=>{
+ const ui=editorFixture('2026-10-24');
+ ui.open({habit_id:9,habit_name:'Read',target:20,unit:'minutes',tracking:'measure',description:'Keep this note',category:'Learning'});
+ assert.equal(ui.form.querySelector('[name=description]'),null);
+ assert.equal(ui.form.querySelector('[name=category]'),null);
+ assert.equal(ui.form.querySelectorAll('input').some(input=>input.attrs.type==='range'),false);
+ ui.select('target','35');await ui.submit();
+ assert.equal(ui.requests[0].body.target,'35');assert.equal(ui.requests[0].body.unit,'minutes');
+ assert.equal(ui.requests[0].body.description,'Keep this note');assert.equal(ui.requests[0].body.category,'Learning');
+ ui.select('measure_unit','litres');ui.select('target','2.5');await ui.submit();
+ assert.equal(ui.requests[1].body.target,'2.5');assert.equal(ui.requests[1].body.unit,'litres');
+ ui.select('measure_unit','custom');ui.select('unit','pages');await ui.submit();
+ assert.equal(ui.requests[2].body.unit,'pages');
+ ui.select('tracking','checkoff');await ui.submit();
+ assert.equal(ui.requests[3].body.target,'');assert.equal(ui.requests[3].body.unit,'');
+});
+test('habit icon and color arrows scroll in both directions without submitting or changing selection',()=>{
+ const ui=editorFixture('2026-10-24');ui.open({icon:'book',color:'blue'});
+ for(const kind of ['icon-choices','color-choices']) {
+  const strip=ui.form.querySelector('.'+kind),options=strip.querySelector('.choice-options'),moves=[];
+  options.scrollBy=movement=>moves.push(movement.left);
+  const selected=strip.querySelector('input:checked').value;
+  for(const direction of ['next','previous']) {
+   const arrow=strip.querySelector('.'+direction);assert.equal(arrow.attrs.type,'button');arrow.attrs.onclick();
+  }
+  assert.deepEqual(moves,[156,-156]);assert.equal(strip.querySelector('input:checked').value,selected);
+ }
+ assert.equal(ui.requests.length,0);
+});
+test('weekday picker has seven individual days without an All days button',()=>{
+ const ui=editorFixture('2026-10-24');ui.open({});ui.select('repeat','weekdays');
+ assert.equal(ui.form.querySelector('.weekday-choices').querySelectorAll('input').length,7);
+ assert.doesNotMatch(ui.form.textContent,/All days/);
 });

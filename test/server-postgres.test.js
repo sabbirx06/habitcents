@@ -303,7 +303,7 @@ test('universal streak storage is forward-only, atomic with current habit change
   assert.equal((await read()).count,null);assert.equal((await get('/universal-streak')).status,302);
   await db.exec(fs.readFileSync(path.join(__dirname,'../migrations/002-universal-streak-draft.sql'),'utf8'));
   await db.query("SET TIME ZONE 'UTC'");
-  const clock=(await db.query("SELECT CURRENT_DATE::text AS today,(CURRENT_DATE-1)::text AS yesterday,(CURRENT_DATE-2)::text AS start")).rows[0];
+  const clock=(await db.query("SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date::text AS today,((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date-1)::text AS yesterday,((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date-2)::text AS start")).rows[0];
   await post('/add-habit',{name:'One',difficulty:2},cookie);await post('/add-habit',{name:'Two',difficulty:9},cookie);
   const habits=await(await get('/get-habits',cookie)).json();
   await db.query("INSERT INTO universal_streak_enrollments(user_id,starts_on,empty_day_policy,day_change_policy,time_zone,policies_confirmed,capture_version) VALUES (1,$1,'reset','apply','Asia/Dhaka',true,1)",[clock.start]);

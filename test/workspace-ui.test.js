@@ -91,11 +91,11 @@ test("habit summaries retain direct actions and expenses retain transaction filt
   const expenses = await render("expenses");
   const workspaceStart = expenses.indexOf('<div class="expense-workspace">'),
     budgetAt = expenses.indexOf("expense-budget", workspaceStart),
-    monthAt = expenses.indexOf('id="expense-budget-spent"', workspaceStart),
+    monthAt = expenses.indexOf('id="expense-month-spent"', workspaceStart),
     recurringAt = expenses.indexOf("expense-recurring", workspaceStart);
   assert.ok(workspaceStart < budgetAt && budgetAt < monthAt && monthAt < recurringAt);
-  assert.doesNotMatch(expenses, /expense-today|Spent today|expense-summary-row|expense-spending-stack/);
-  for (const id of ["monthly-budget", "expense-budget-spent", "calendar-open", "recurring-list", "recurring-status", "recurring-retry"])
+  assert.doesNotMatch(expenses, /expense-budget-spent|budget-month-spent/);
+  for (const id of ["monthly-budget", "expense-today-spent", "expense-month-spent", "calendar-open", "recurring-list", "recurring-status", "recurring-retry"])
     assert.equal((expenses.match(new RegExp(`id="${id}"`, "g")) || []).length, 1, `${id} must stay unique`);
   assert.match(expenses, /id="budget-edit" class="workspace-text-button"/);
   assert.match(expenses, /id="calendar-open" class="workspace-button secondary small"/);
@@ -139,7 +139,7 @@ test("expense aggregation reconciles precise daily and category totals without i
 test("recurring expense rows keep accessible edit and payment-confirmation actions", () => {
   const source = fs.readFileSync("public/js/expenses.js", "utf8");
   assert.match(source, /recurringAction\("Edit " \+ r\.name/);
-  assert.match(source, /recurringAction\("Record payment due " \+ dueLabel/);
+  assert.match(source, /recurringAction\("Mark " \+ r\.name \+ " paid · due " \+ dueLabel/);
   assert.match(source, /api\("\/api\/recurring\/confirm"/);
   assert.match(source, /await Promise\.all\(\[loadExpenses\(\), loadRecurring\(\)\]\)/);
   assert.match(source, /"aria-label": label/);

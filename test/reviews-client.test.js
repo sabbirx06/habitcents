@@ -24,5 +24,14 @@ test('review cards label recorded check-ins, preserve partial history, and show 
  assert.match(el('#review-range').children[0].textContent,/Oct 1\s+–\s+31, 2026/);assert.equal(el('#review-range').children[1].textContent,'So far');
  assert.match(output,/7 completed check-ins recorded/);assert.match(output,/Partial history/);assert.match(output,/7 \/ 9 known occurrences/);assert.doesNotMatch(output,/%/);
  assert.match(output,/Tk 1,234\.56/);assert.match(output,/Tk 1,000\.06/);assert.match(output,/Category unavailable/);assert.match(output,/1\.5 \/ 3 hours/);assert.match(output,/Tk 1,200\.00/);
- const elements=[];const walk=item=>{elements.push(item);item.children.forEach(walk);};walk(el('#review-content'));assert.ok(elements.some(item=>item.tagName==='details'||item.tag==='details'||item.className==='review-notes'));
+ let cards=el('#review-content').children[0].children;
+ assert.equal(cards[1].attributes['aria-label'],'Habit completion percentage');
+ assert.equal(cards[1].children[1].textContent,'—');
+ assert.ok(!cards.some(item=>item.attributes['aria-label']==='Spending'));
+ data.habits.unknownRequirements=false;data.habits.scheduled={required:10,fulfilled:7,rate:.7};
+ monthly.click();await new Promise(resolve=>setImmediate(resolve));
+ cards=el('#review-content').children[0].children;assert.equal(cards[1].children[1].textContent,'70%');
+ data.habits.scheduled={required:10,fulfilled:0,rate:0};
+ monthly.click();await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(el('#review-content').children[0].children[1].children[1].textContent,'0%');
 });

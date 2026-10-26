@@ -1,0 +1,8 @@
+/* SVG view boxes own the artwork bounds; no raster crop or absolute offsets. */
+.brand-wordmark,.brand-mark{display:block;flex-shrink:0}
+.brand-wordmark{width:174px}
+.brand-mark{width:38px}
+.brand-wordmark img,.brand-mark img{display:block;width:100%;height:auto;max-width:100%}
+.auth-brand .brand-wordmark{width:clamp(155px,15vw,210px);margin:0}
+.dock-brand .brand-mark{width:33px}
+.auth-symbol .brand-mark{width:100%}

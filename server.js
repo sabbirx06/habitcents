@@ -150,9 +150,13 @@ function createApp({ db, sessionSecret, sessionStore }) {
     if(!(await db.query("SELECT to_regclass('habit_schedule_versions') IS NOT NULL AS ready")).rows[0].ready)warnings.push('Habit schedule/history snapshots are not supported by this installation.');
     let recurringExpenses=[];try{const {rows}=await db.query("SELECT table_name FROM information_schema.tables WHERE table_schema=current_schema() AND table_name='recurring_expenses'");if(rows.length){const result=await db.query('SELECT recurring_id,user_id,name,amount::text AS amount,category,frequency,starts_on::text AS starts_on,next_due::text AS next_due,ends_on::text AS ends_on,enabled FROM recurring_expenses WHERE user_id=$1 ORDER BY recurring_id',[owner]);recurringExpenses=result.rows;}else warnings.push('Recurring-expense definitions are not supported by this installation.');}catch(error){if(error.code==='42P01')warnings.push('Recurring-expense definitions are not supported by this installation.');else throw error;}
     warnings.push('Savings exports contain current saved balances only; dated contribution history is not stored by this installation.');
+    let budgetAdditions=[];
+    if((await db.query("SELECT to_regclass('budget_additions') IS NOT NULL AS ready")).rows[0].ready){
+      budgetAdditions=(await db.query('SELECT addition_id,user_id,budget_id,amount::text AS amount,source,date::text AS date,created_at FROM budget_additions WHERE user_id=$1 ORDER BY addition_id',[owner])).rows;
+    }
     const exported=await require('./lib/habit-export').habitExport(db,owner),optional={};
     for(const key of ['habitCategories','streakEnrollment','streakDays','streakRequirements']){const result=await require('./lib/habit-export').optionalOwned(db,key,owner);optional[key]=result.rows;if(result.warning)warnings.push(result.warning);}
-    const payload={schemaVersion:1,exportedAt:new Date().toISOString(),description:'HabitCents account data export. Amounts are preserved as decimal strings. Historical rule values are null where no effective-dated evidence exists.',datasets:{user:users.rows[0]||null,habits:habits.rows,habitHistory:logs.rows,habitScheduleHistory:exported.versions,recordedHabitRules:exported.logs,expenses:expenses.rows,budgets:budgets.rows,savingsGoals:goals.rows,recurringExpenses,...optional},warnings};
+    const payload={schemaVersion:1,exportedAt:new Date().toISOString(),description:'HabitCents account data export. Amounts are preserved as decimal strings. Historical rule values are null where no effective-dated evidence exists.',datasets:{user:users.rows[0]||null,habits:habits.rows,habitHistory:logs.rows,habitScheduleHistory:exported.versions,recordedHabitRules:exported.logs,expenses:expenses.rows,budgets:budgets.rows,budgetAdditions,savingsGoals:goals.rows,recurringExpenses,...optional},warnings};
     return {payload,warnings};
     });
     const {payload,warnings}=bundle;

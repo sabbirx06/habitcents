@@ -27,6 +27,7 @@ import {
   animateValues,
   cancelMetric,
   moneyMetric,
+  formData,
 } from "./workspace.js";
 import { spendingScale } from "./dashboard.js";
 let data = null,
@@ -92,43 +93,65 @@ function editExpense(expense = {}) {
     { extra, submit: expense.expense_id ? 'Save expense' : 'Add expense' },
   );
 }
-function editBudget() {
-  editor(
-    "Monthly budget",
-    [
-      node(
-        "p",
-        { class: "full" },
-        "Budget for " + month + ". Existing transactions will be preserved.",
-      ),
-      field("Budget · Tk", "amount", "number", data?.budget ?? "", {
-        required: "",
-        min: 0,
-        max: 99999999.99,
-        step: ".01",
+function manageBudget() {
+  const selected=month, today=data?.today||localDay();
+  let busy=false,requestKey=crypto.randomUUID();
+  function budgetForm(title,fields,label){
+    const heading=node('div',{class:'budget-form-heading full'},node('h3',{},title)),
+      feedback=node('p',{class:'workspace-status full',role:'status'}),
+      save=node('button',{type:'submit',class:'workspace-button'},label),
+      form=node('form',{class:'workspace-form budget-manager-form'},
+        heading,fields,node('div',{class:'actions budget-form-actions'},save),feedback);
+    if(title==='Edit budget')heading.append(node('time',{class:'budget-month-pill',datetime:selected},displayDate(selected+'-01',{month:'short',year:'numeric'})));
+    return {form,feedback,save};
+  }
+  const edit=budgetForm('Edit budget',[
+      field('Monthly budget · Tk','amount','number',data?.budget??'',{required:'',min:0,max:99999999.99,step:'.01'}),
+    ],'Save budget'),
+    add=budgetForm('Add money',[
+      field('Amount · Tk','amount','number','',{required:'',min:'.01',max:99999999.99,step:'.01'}),
+      field('Source','source','text','',{required:'',maxlength:255,placeholder:'e.g. Freelancing'}),
+      calendarField('Date','date',selected===today.slice(0,7)?today:selected+'-01',{
+        required:'',min:selected+'-01',max:monthDays(selected).at(-1)<today?monthDays(selected).at(-1):today,
       }),
-    ],
-    async (values) => {
-      await api("/api/budget", { month, amount: values.amount });
+    ],'Add money'),
+    content=node('div',{class:'budget-manager'},edit.form,add.form);
+  const dialog=modal('Manage budget',content);
+  dialog.classList.add('budget-manager-dialog');
+  function updateButtons(){edit.save.disabled=busy;add.save.disabled=busy;}
+  updateButtons();
+  async function save(event,section,adding){
+    event.preventDefault();
+    if(busy||dialog.classList.contains('closing')||!section.form.reportValidity())return;
+    const values=formData(section.form);
+    busy=true;updateButtons();status(section.feedback,'Saving…');
+    try{
+      await api(adding?'/api/budget/additions':'/api/budget',{
+        ...values,month:selected,...(adding?{request_key:requestKey}:{}),
+      });
+      if(adding){requestKey=crypto.randomUUID();section.form.reset();}
       notifyChange();
       await loadExpenses();
-    },
-    { submit: 'Save budget' },
-  );
+      if(!content.isConnected)return;
+      if(data?.month===selected)edit.form.querySelector('[name="amount"]').value=data.budget??'';
+      status(section.feedback,adding?'Money added.':'Budget saved.');
+    }catch(error){if(content.isConnected)status(section.feedback,error.message,true);}
+    finally{busy=false;updateButtons();}
+  }
+  edit.form.addEventListener('submit',event=>save(event,edit,false));
+  add.form.addEventListener('submit',event=>save(event,add,true));
 }
-function renderBudget(total) {
+function renderBudget(total, todayTotal) {
   const budget = data.budget === null ? null : amountCents(data.budget),
     remaining = budget === null ? null : budget - total,
     p = budget ? Math.max(0, Math.min(100, (remaining / budget) * 100)) : 0;
   if (remaining === null) {
     cancelMetric('expense-budget');$('#monthly-budget').textContent='Not set';$('#monthly-budget').removeAttribute('aria-label');
-    moneyMetric($('#expense-budget-spent'),'expense-spent',total/100);
     $('#expense-budget-meter span').style.width='0%';$('#expense-budget-meter').removeAttribute('aria-valuenow');$('#expense-budget-meter').setAttribute('aria-valuetext','No monthly budget set');
   } else {
-    cancelMetric('expense-spent');
-    $('#monthly-budget').setAttribute('aria-label',money(remaining/100));$('#expense-budget-spent').setAttribute('aria-label',money(total/100));
-    animateValues($('#monthly-budget'),'expense-budget',{remaining:remaining/100,spent:total/100,percent:p},frame=>{
-      $('#monthly-budget').replaceChildren(moneyFigure(frame.remaining));$('#expense-budget-spent').replaceChildren(moneyFigure(frame.spent));
+    $('#monthly-budget').setAttribute('aria-label',money(remaining/100));
+    animateValues($('#monthly-budget'),'expense-budget',{remaining:remaining/100,percent:p},frame=>{
+      $('#monthly-budget').replaceChildren(moneyFigure(frame.remaining));
       $('#expense-budget-meter span').style.width=frame.percent+'%';
       if(remaining>=0) $('#budget-warning').textContent=Math.round(frame.percent)+'% remaining';
     });
@@ -142,6 +165,8 @@ function renderBudget(total) {
         ? "Over budget by " + money(-remaining / 100)
         : Math.round(p) + "% remaining";
   $('#budget-warning').setAttribute('aria-label',budget === null ? 'No monthly budget set' : remaining < 0 ? 'Over budget by '+money(-remaining/100) : Math.round(p)+'% remaining');
+  moneyMetric($('#expense-today-spent'),'expense-today',todayTotal/100);
+  moneyMetric($('#expense-month-spent'),'expense-month-summary',total/100);
 }
 function renderChart(series) {
   const days = monthDays(month).filter((d) => d <= data.today),
@@ -192,24 +217,6 @@ function renderChart(series) {
       .filter(Boolean)
       .map((d) => node("span", {}, displayDate(d, { month: "short", day: "numeric" }))),
   );
-  const table = node(
-    "table",
-    { class: "workspace-table" },
-    node("caption", {}, "Daily recorded spending; zero means no entries recorded."),
-    node(
-      "thead",
-      {},
-      node("tr", {}, node("th", { scope: "col" }, "Date"), node("th", { scope: "col" }, "Amount")),
-    ),
-    node(
-      "tbody",
-      {},
-      days.map((d) =>
-        node("tr", {}, node("td", {}, d), node("td", {}, money((series.get(d) || 0) / 100))),
-      ),
-    ),
-  );
-  $("#daily-values").replaceChildren(table);
   $("#expense-chart-detail").textContent = !days.length
     ? "Future dates are not plotted."
     : !series.size
@@ -396,7 +403,15 @@ export async function loadExpenses() {
       throw Error("Invalid monthly response.");
     data = result;
     const aggregate = aggregateExpenses(data.expenses);
-    renderBudget(aggregate.total);
+    let todayTotal = aggregate.byDate.get(data.today) || 0;
+    if (selected !== data.today.slice(0, 7)) {
+      const current = await api("/api/expenses?month=" + data.today.slice(0, 7));
+      if (token !== generation) return;
+      if (current.month !== data.today.slice(0, 7) || !Array.isArray(current.expenses))
+        throw Error("Today's spending is unavailable.");
+      todayTotal = aggregateExpenses(current.expenses).byDate.get(data.today) || 0;
+    }
+    renderBudget(aggregate.total, todayTotal);
     renderChart(aggregate.byDate);
     renderBreakdown();
     renderTransactions();
@@ -404,9 +419,9 @@ export async function loadExpenses() {
     status("#expenses-status", "");
   } catch (e) {
     if (token !== generation) return;
-    cancelMetric('expense-budget');cancelMetric('expense-spent');
+    cancelMetric('expense-budget');cancelMetric('expense-today');cancelMetric('expense-month-summary');
     data = null;
-    for (const s of ["#monthly-budget", "#expense-budget-total", "#expense-budget-spent"])
+    for (const s of ["#monthly-budget", "#expense-budget-total", "#expense-today-spent", "#expense-month-spent"])
       { $(s).textContent = "—";$(s).removeAttribute('aria-label'); }
     for (const s of [
       "#expense-list",
@@ -415,7 +430,6 @@ export async function loadExpenses() {
       "#expense-bars",
       "#expense-y-axis",
       "#expense-x-axis",
-      "#daily-values",
       "#spending-calendar",
     ])
       $(s).replaceChildren();
@@ -430,10 +444,13 @@ export async function loadExpenses() {
   }
 }
 function recurringEditor(r = {}) {
-  editor(
+  const service = selectField("Service", "service", [["custom", "Custom name"], ["Netflix", "Netflix"], ["Spotify", "Spotify"], ["YouTube Premium", "YouTube Premium"], ["Apple Music", "Apple Music"], ["Google One", "Google One"], ["Dropbox", "Dropbox"], ["Amazon Prime", "Amazon Prime"], ["Other", "Other service"]], r.name && ["Netflix", "Spotify", "YouTube Premium", "Apple Music", "Google One", "Dropbox", "Amazon Prime"].includes(r.name) ? r.name : "custom");
+  const nameField = field("Custom service or subscription name", "name", "text", r.name, { required: "", maxlength: 255 });
+  const form = editor(
     r.recurring_id ? "Edit recurring expense" : "New recurring expense",
     [
-      field("Description", "name", "text", r.name, { required: "", maxlength: 255 }),
+      service,
+      nameField,
       field("Amount · Tk", "amount", "number", r.amount, {
         required: "",
         min: ".01",
@@ -462,11 +479,6 @@ function recurringEditor(r = {}) {
         ],
         r.enabled === false ? "false" : "true",
       ),
-      node(
-        "p",
-        { class: "workspace-muted full" },
-        "Monthly payments keep the starting day, clamped to the last day of shorter months. No transaction is created until you confirm payment.",
-      ),
     ],
     async (values) => {
       await api("/api/recurring/save", {
@@ -478,10 +490,19 @@ function recurringEditor(r = {}) {
     },
     { submit: r.recurring_id ? 'Save recurring expense' : 'Create recurring expense' },
   );
+  const serviceSelect = form.querySelector('[name="service"]'), nameInput = form.querySelector('[name="name"]');
+  const syncService = () => { const custom = serviceSelect.value === "custom" || serviceSelect.value === "Other"; nameInput.disabled = !custom; nameInput.required = custom; if (!custom) nameInput.value = serviceSelect.value; };
+  serviceSelect.addEventListener("change", syncService); syncService();
 }
 function recurringInitials(name) {
   const parts = String(name || "?").trim().split(/\s+/).filter(Boolean);
   return (parts.length > 1 ? parts[0][0] + parts[1][0] : (parts[0] || "?").slice(0, 2)).toUpperCase();
+}
+function recurringServiceMark(name) {
+  const marks = { Netflix: { text: "N", color: "#e50914" }, Spotify: { text: "≋", color: "#1b7f43" }, "YouTube Premium": { text: "▶", color: "#d11a1a" }, "Apple Music": { text: "♪", color: "#ba4c8f" }, "Google One": { text: "1", color: "#4285f4" }, Dropbox: { text: "◇", color: "#1769ff" }, "Amazon Prime": { text: "a", color: "#1769aa" } };
+  const mark = marks[name];
+  if (!mark) return document.createTextNode(recurringInitials(name));
+  return node("span", { class: "recurring-brand-mark", "aria-hidden": "true", style: "color:" + mark.color }, mark.text);
 }
 function recurringDateLabel(date, today) {
   const [year, month, day] = date.split("-").map(Number);
@@ -516,13 +537,13 @@ async function loadRecurring() {
     if (token !== recurringGeneration) return;
     $("#recurring-list").replaceChildren(
       ...response.definitions.map((r) => {
-        const due =
-          r.enabled && r.next_due <= response.today && (!r.ends_on || r.next_due <= r.ends_on);
+        const payable =
+          r.enabled && (!r.ends_on || r.next_due <= r.ends_on);
         const dueLabel = recurringDateLabel(r.next_due, response.today),
           actions = node("div", { class: "recurring-actions" },
             recurringAction("Edit " + r.name, "M4 16.5V20h3.5L18 9.5 14.5 6 4 16.5zM13.5 7l3.5 3.5", () => recurringEditor(r)),
-            due
-              ? recurringAction("Record payment due " + dueLabel, "M20 6 9 17l-5-5", () =>
+            payable
+              ? recurringAction("Mark " + r.name + " paid · due " + dueLabel, "M20 6 9 17l-5-5", () =>
                   editor(
                     "Confirm payment",
                     [
@@ -545,13 +566,13 @@ async function loadRecurring() {
                       notifyChange();
                       await Promise.all([loadExpenses(), loadRecurring()]);
                     },
-                    { submit: "Record payment" },
+                    { submit: "Mark paid" },
                   ),
                 )
               : null,
           ),
           row = node("div", { class: "recurring-row" },
-            node("span", { class: "recurring-service-icon", "aria-hidden": "true" }, recurringInitials(r.name)),
+            node("span", { class: "recurring-service-icon", "aria-hidden": "true" }, recurringServiceMark(r.name)),
             node("div", { class: "recurring-name" }, node("strong", {}, r.name)),
             node("div", { class: "recurring-meta" }, node("strong", {}, money(r.amount)), node("span", {}, r.enabled ? "Due " + dueLabel : "Disabled")),
             actions,
@@ -605,7 +626,7 @@ export function initExpenses() {
   $("#expense-new").addEventListener("click", () =>
     editExpense({ date: month === localDay().slice(0, 7) ? localDay() : month + "-01" }),
   );
-  $("#budget-edit").addEventListener("click", editBudget);
+  $("#budget-edit").addEventListener("click", manageBudget);
   $("#expenses-retry").addEventListener("click", loadExpenses);
   $("#recurring-new").addEventListener("click", () => recurringEditor());
   $("#recurring-retry").addEventListener("click", loadRecurring);

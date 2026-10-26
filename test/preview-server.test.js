@@ -2,6 +2,20 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { createServer } = require("node:http");
 const { createPreviewApp } = require("../preview-server");
+test('preview records upcoming recurring bills early and rejects duplicate confirmations',async()=>{
+ await withPreview(async base=>{
+  const post=(path,body)=>fetch(base+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const today=(await(await fetch(base+'/api/recurring')).json()).today,start=(Number(today.slice(0,4))+1)+'-01-01';
+  assert.equal((await post('/api/recurring/save',{name:'Early bill',amount:'12.35',category:'subscriptions',frequency:'monthly',starts_on:start,enabled:true})).status,200);
+  const r=(await(await fetch(base+'/api/recurring')).json()).definitions.find(r=>r.name==='Early bill');
+  const body={recurring_id:r.recurring_id,scheduled_for:start,date:today};
+  assert.equal((await post('/api/recurring/confirm',body)).status,200);
+  assert.equal((await post('/api/recurring/confirm',body)).status,409);
+  const expenses=await(await fetch(base+'/get-expenses')).json();
+  assert.equal(expenses.filter(e=>e.recurring_id===r.recurring_id).length,1);
+  assert.equal(expenses.find(e=>e.recurring_id===r.recurring_id).date,today);
+ });
+});
 
 async function withPreview(run) {
   const server = createServer(createPreviewApp());

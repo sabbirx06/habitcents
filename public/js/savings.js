@@ -53,9 +53,8 @@ function editGoal(goal = {}) {
 }
 function contribute(goal) {
   editor(
-    "Add savings",
+    "Add savings · " + goal.name,
     [
-      node("p", { class: "full" }, "Contribution to ", node("strong", {}, goal.name)),
       field("Amount · Tk", "amount", "number", "", {
         required: "",
         min: ".01",

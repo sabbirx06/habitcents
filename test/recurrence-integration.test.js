@@ -17,6 +17,24 @@ async function fixture(run){
  try{await run({db,query,post,get,login,clock:v=>instant=v});}finally{await new Promise(r=>server.close(r));await db.close();}
 }
 const habit=(extra={})=>({name:'Gym',schedule_days:[1,2,3,4,5,6,7],target:'3',unit:'visits',tracking:'count',recurrence:{frequency:'weekly',mode:'quota'},...extra});
+test('upcoming recurring payments can be paid early once, against the actual payment month',()=>fixture(async({db,post,get,login})=>{
+ const cookie=await login(),other=await login('other@test');
+ await post('/api/budget',{month:'2026-10',amount:'500'},cookie);
+ const created=await post('/api/recurring/save',{name:'Early bill',amount:'12.35',frequency:'monthly',starts_on:'2026-11-01',ends_on:'2026-11-01',enabled:true},cookie);
+ assert.equal(created.status,200);
+ const r=(await(await get('/api/recurring',cookie)).json()).definitions[0];
+ const body={recurring_id:r.recurring_id,scheduled_for:r.next_due,date:'2026-10-25'};
+ assert.equal((await post('/api/recurring/confirm',body,other)).status,404);
+ assert.equal((await post('/api/recurring/confirm',{...body,date:'2026-10-26'},cookie)).status,409);
+ assert.equal((await post('/api/recurring/confirm',{...body,date:'2026-09-30'},cookie)).status,409);
+ const responses=await Promise.all([1,2].map(()=>post('/api/recurring/confirm',body,cookie)));
+ assert.deepEqual(responses.map(r=>r.status).sort(),[200,409]);
+ const rows=(await db.query('SELECT e.date::text,e.scheduled_for::text,e.amount,b.month,b.year FROM expenses e JOIN budgets b USING(budget_id) WHERE recurring_id=$1',[r.recurring_id])).rows;
+ assert.equal(rows.length,1);assert.equal(rows[0].date,'2026-10-25');assert.equal(rows[0].scheduled_for,'2026-11-01');
+ assert.equal(Number(rows[0].amount),12.35);assert.equal(rows[0].month,10);assert.equal(rows[0].year,2026);
+ const updated=(await(await get('/api/recurring',cookie)).json()).definitions[0];
+ assert.equal(updated.next_due,'2026-12-01');assert.equal(updated.enabled,false);
+}));
 test('quota activation, daily totals, pending changes, rollover and isolation execute real routes',()=>fixture(async({db,post,get,login,clock})=>{
  const cookie=await login(),other=await login('b@test');
  const save=await post('/api/habits/save',habit(),cookie);assert.equal(save.status,200,await save.clone().text());const id=(await save.json()).habit_id;

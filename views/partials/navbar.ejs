@@ -1,6 +1,6 @@
 <!-- Shared floating navigation for authenticated pages -->
 <nav class="nav-dock" aria-label="Primary navigation">
- <a class="dock-link dock-brand" href="/dashboard" aria-label="HabitCents home"><span class="brand-symbol" aria-hidden="true">h.</span><span class="dock-tooltip" aria-hidden="true">HabitCents home</span></a>
+ <a class="dock-link dock-brand" href="/dashboard" aria-label="HabitCents home"><%- include('brand', {variant: 'mark'}) %><span class="dock-tooltip" aria-hidden="true">HabitCents home</span></a>
  <span class="dock-separator" aria-hidden="true"></span>
  <ul class="dock-links">
  <% const destinations = [

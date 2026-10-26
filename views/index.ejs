@@ -1,86 +1,59 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <script src="/js/motion-preference.js"></script>
-    <link rel="stylesheet" href="/css/motion-preference.css" />
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Habitcents</title>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f7f6f0" />
+  <meta name="description" content="HabitCents brings your habits, spending, and savings together in one app." />
+  <title>HabitCents — Your habits, money, and savings.</title>
+  <script src="/js/motion-preference.js"></script>
+  <link rel="stylesheet" href="/css/motion-preference.css" />
+  <link rel="preload" href="/fonts/NeueHaasGrotDisp-55Roman-Trial.otf" as="font" type="font/otf" crossorigin />
+  <link rel="stylesheet" href="/css/fonts-authenticated.css" />
+  <link rel="stylesheet" href="/css/brand.css" />
+  <link rel="stylesheet" href="/css/landing.css" />
+  <link rel="icon" href="/logo/habitcents-favicon-padded.svg" type="image/svg+xml" />
+  <script src="/js/landing.js" defer></script>
+</head>
+<body>
+  <% const arrow = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>'; %>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header wrap">
+    <a class="site-brand" href="/" aria-label="HabitCents home"><%- include('partials/brand', {variant:'wordmark'}) %></a>
+    <nav class="header-actions" aria-label="Account navigation"><a class="login-link" href="/login">Log in</a><a class="button button-small" href="/signup">Get started <%- arrow %></a></nav>
+  </header>
+  <main id="main">
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <h1 id="hero-title"><span class="sr-only">Your habits, money, and savings.</span><span aria-hidden="true"><span class="hero-line">Your <span class="word-window"><span class="word-measure">savings</span><span id="rotating-word" data-word="habits">habits</span></span></span></span></h1>
+      <p class="hero-description">HabitCents brings your habits, spending, and savings<br class="desktop-break" /> together in one app.</p>
+      <div class="hero-actions"><a class="button" href="/signup">Get started <%- arrow %></a><button class="button button-android" type="button" disabled aria-describedby="android-status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="m7 5-2-3m12 3 2-3M4 12a8 8 0 0 1 16 0v6H4zM8 18v3m8-3v3M1 12v5m22-5v5"/><path d="M8 9h.01M16 9h.01" stroke-width="2.5"/></svg><span>Android <span class="coming-later">Coming later</span></span></button></div>
+      <div class="hero-note"><p id="android-status">Android app development hasn't started yet.</p><button id="rotation-toggle" class="rotation-toggle" type="button" aria-label="Pause headline animation" title="Pause headline animation" hidden><svg class="pause-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 3h3v10H4zm5 0h3v10H9z"/></svg><svg class="play-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="m5 3 8 5-8 5z"/></svg></button></div>
+    </section>
 
-    <link rel="stylesheet" href="/css/fonts.css" />
+    <figure class="dashboard-preview wrap" aria-label="HabitCents dashboard preview with sample data"><div class="screenshot-frame"><img src="/media/previews/dashboard.webp" width="1280" height="840" alt="HabitCents dashboard showing daily habit progress, monthly budget, savings, and spending in one overview. Sample data." fetchpriority="high" /></div><figcaption>A look inside HabitCents. <span>Sample data.</span></figcaption></figure>
 
-    <!-- Bootstrap CSS -->
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-      integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
-      crossorigin="anonymous"
-    />
-
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="/css/style.css" />
-    <link rel="icon" href="/media/favicon.svg" type="image/svg+xml" />
-  </head>
-
-  <body>
-    <!-- Navbar: simple site navigation for visitors -->
-    <div class="container-fluid navbar-container">
-      <nav class="navbar navbar-expand navbar-dark bg-dark">
-        <a class="navbar-brand" href="/habits">Habitcents</a>
-        <ul class="navbar-nav ms-auto">
-          <li class="nav-item nav-signup d-flex gap-2">
-            <button
-              type="button"
-              class="btn btn-primary"
-              onclick="window.location.href = '/signup'"
-            >
-              Sign Up
-            </button>
-            <button
-              type="button"
-              class="btn btn-outline-light"
-              onclick="window.location.href = '/login'"
-            >
-              Login
-            </button>
-          </li>
-        </ul>
-      </nav>
-    </div>
-
-    <!-- Hero Section -->
-    <div class="container-fluid hero-bg">
-      <div class="hero-text align-items-center text-center">
-        <img src="/media/logo.png" alt="Habitcents logo" class="logo-dash" />
-        <h1 class="main-heading">Habitcents</h1>
-        <p class="text-dash">
-          Welcome to Habitcents! <br />
-          Your personal habit and expense tracker
-        </p>
-        <button
-          type="button"
-          class="btn btn-primary btn-lg btn-get-started mt-4"
-          onclick="window.location.href = '/signup'"
-        >
-          Get Started
-        </button>
-        <!-- <div class="d-flex gap-3 justify-content-center mt-4">
-          <a href="/habits" class="btn btn-outline-light btn-lg">
-            Go to Habits
-          </a>
-          <a href="/expenses" class="btn btn-primary btn-lg">
-            Go to Expenses
-          </a>
-        </div> -->
+    <section id="features" class="features wrap" aria-labelledby="features-title">
+      <div class="features-heading"><h2 id="features-title">A little clarity.<br />Across your everyday.</h2><p>Less switching between apps. More seeing how it all fits together.<br class="desktop-break" /> A space for your routines, your money, and the things ahead.</p></div>
+      <% const features = [
+        {id:'dashboard',title:'Dashboard',copy:'Your day, in perspective. See your habits, budget, and savings together in one clear overview.',alt:'Dashboard with daily progress, budget remaining, savings goals, and recent activity.'},
+        {id:'habits',title:'Habits',copy:'Find a rhythm that works for you. Check in, track your progress, and see your consistency take shape.',alt:'Habits page with daily completion, a streak summary, and three rows of history cells for each habit.'},
+        {id:'money',title:'Money',copy:'Know where it goes. Set your monthly budget, record expenses, and keep everyday spending in view.',alt:'Money page with a monthly budget, spending categories, recurring expenses, and transaction history.'},
+        {id:'savings',title:'Savings',copy:'Give your plans a little momentum. Create a goal, set a target, and build toward something that matters.',alt:'Savings page with named goals, target amounts, saved balances, and contribution controls.'}
+      ]; %>
+      <div class="feature-layout">
+        <div class="feature-tabs" role="tablist" aria-label="Explore HabitCents" aria-orientation="vertical"><% features.forEach((feature,i)=>{ %><button id="tab-<%= feature.id %>" class="feature-tab" type="button" role="tab" aria-selected="<%= i===0 %>" aria-controls="panel-<%= feature.id %>" tabindex="<%= i===0?0:-1 %>" data-feature="<%= feature.id %>"><span class="feature-title"><%= feature.title %></span><span class="feature-description"><%= feature.copy %></span></button><% }); %></div>
+        <div class="feature-previews"><% features.forEach((feature,i)=>{ %><section id="panel-<%= feature.id %>" class="feature-panel" role="tabpanel" aria-labelledby="tab-<%= feature.id %>" tabindex="0" <%- i===0?'':'hidden' %>><div class="screenshot-frame"><img src="/media/previews/<%= feature.id==='money'?'expenses':feature.id %>.webp" width="1280" height="840" loading="lazy" decoding="async" alt="<%= feature.alt %> Sample data." /></div><p class="preview-caption"><%= feature.title %> <span>Preview · sample data</span></p></section><% }); %></div>
       </div>
+    </section>
+  </main>
+  <footer class="site-footer">
+    <div class="footer-main wrap">
+      <div class="footer-identity"><a href="/" aria-label="HabitCents home"><%- include('partials/brand', {variant:'wordmark'}) %></a><p>Your habits. Your money.<br />Your savings. All together.</p></div>
+      <nav class="footer-column" aria-labelledby="footer-app-title"><h3 id="footer-app-title">The app</h3><a href="#features">Explore features</a><a href="/signup">Get started</a><a href="/login">Log in</a></nav>
+      <section class="footer-column" aria-labelledby="footer-resources-title"><h3 id="footer-resources-title">Resources</h3><span class="footer-planned" aria-disabled="true">Documentation<small>Coming soon</small></span><span class="footer-planned" aria-disabled="true">Release notes<small>Coming soon</small></span></section>
+      <section class="footer-column" aria-labelledby="footer-connect-title"><h3 id="footer-connect-title">Connect</h3><span class="footer-planned" aria-disabled="true">Contact me<small>Details coming soon</small></span><span class="footer-planned" aria-disabled="true">Follow me<small>Links coming soon</small></span></section>
     </div>
-
-    <%- include("partials/footer") %>
-
-    <script
-      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
-      integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
-      crossorigin="anonymous"
-    ></script>
-  </body>
+    <div class="footer-bottom wrap"><span>© <%= new Date().getFullYear() %> HabitCents</span><p>Made with <span class="heart" role="img" aria-label="love">♥</span> by <span class="team-name">Team Alpha</span></p></div>
+  </footer>
+</body>
 </html>

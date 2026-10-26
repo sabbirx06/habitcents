@@ -14,8 +14,6 @@ import {
   bindWorkspaceRefresh,
   choiceField,
   selectField,
-  durationField,
-  disclosure,
   animateValues,
   cancelMetric,
   replaceList,
@@ -104,11 +102,6 @@ function progressEditor(h) {
         max: 99999999.99,
         step: h.tracking === 'count' ? '1' : '.01',
       }),
-      node(
-        "p",
-        { class: "workspace-muted full" },
-        "This sets today’s total. It does not add another increment.",
-      ),
     ],
     async (values) => {
       await api("/api/habits/progress", {
@@ -148,7 +141,7 @@ async function toggle(h, control) {
 }
 // Honor saved category metadata when present, then the habit's saved palette.
 export function habitAccent(habit, categories = []) {
-  const palette = ['lime', 'blue', 'pink', 'lavender', 'peach'];
+  const palette = ['lime', 'blue', 'pink', 'lavender', 'peach', 'coral', 'teal', 'yellow', 'mint', 'lilac'];
   const saved = [habit.color, categories.find(category => category.name === habit.category)?.color]
     .find(color => palette.includes(color));
   if (saved) return saved;
@@ -166,12 +159,8 @@ function habitEditor(h = {}) {
       required: "",
       maxlength: 255,
     }),
-    description = field("Description (optional)", "description", "text", h.description, {
-      maxlength: 1000,
-    }),
-    category = field("Category (optional)", "category", "text", h.category, { maxlength: 50 }),
     icon = choiceField(
-      "Icon",
+      "Habit icon",
       "icon",
       [
         ["check", "Spark", { icon: "check" }],
@@ -180,12 +169,19 @@ function habitEditor(h = {}) {
         ["water", "Water", { icon: "water" }],
         ["leaf", "Nature", { icon: "leaf" }],
         ["focus", "Focus", { icon: "focus" }],
+        ["heart", "Wellbeing", { icon: "heart" }],
+        ["sun", "Morning", { icon: "sun" }],
+        ["dumbbell", "Strength", { icon: "dumbbell" }],
+        ["music", "Music", { icon: "music" }],
+        ["food", "Nutrition", { icon: "food" }],
+        ["sleep", "Sleep", { icon: "sleep" }],
+        ["code", "Create", { icon: "code" }],
       ],
       h.icon || "focus",
-      'icon-choices',
+      'icon-choices habit-choice-strip',
     ),
     color = choiceField(
-      "Color",
+      "Habit color",
       "color",
       [
         ["lavender", "Lavender", { color: '#e0cfe0' }],
@@ -193,10 +189,24 @@ function habitEditor(h = {}) {
         ["lime", "Lime", { color: '#d6df9c' }],
         ["peach", "Peach", { color: '#ead4c3' }],
         ["pink", "Pink", { color: '#e5cde2' }],
+        ["coral", "Coral", { color: '#f0b5a5' }],
+        ["teal", "Teal", { color: '#a9d3cc' }],
+        ["yellow", "Yellow", { color: '#ead990' }],
+        ["mint", "Mint", { color: '#b9d6b3' }],
+        ["lilac", "Lilac", { color: '#c9b8df' }],
       ],
       habitAccent(h, state?.categories),
-      'color-choices',
+      'color-choices habit-choice-strip',
     );
+  for (const strip of [icon,color]) {
+    const options=strip.querySelector('.choice-options');
+    const arrow=(direction,label)=>node('button',{
+      type:'button',class:'choice-scroll-arrow '+(direction<0?'previous':'next'),
+      'aria-label':label+' '+strip.querySelector('legend').textContent.toLowerCase(),
+      onclick:()=>options.scrollBy({left:direction*156,behavior:(globalThis.HabitMotionPreference?.reduced()??true)?'instant':'smooth'}),
+    });
+    strip.replaceChildren(strip.querySelector('legend'),node('div',{class:'habit-choice-row'},arrow(-1,'Previous'),options,arrow(1,'Next')));
+  }
   const days = node(
       "fieldset",
       { class: "full schedule-days" },
@@ -218,14 +228,7 @@ function habitEditor(h = {}) {
         weekdayNames[i - 1],
       ),
     );
-  days.append(
-    button(
-      "All days",
-      () => choices.querySelectorAll("input").forEach((i) => (i.checked = true)),
-      true,
-    ),
-    choices,
-  );
+  days.append(choices);
   const R=globalThis.HabitRecurrence;
   const target = field('Daily target','target','number',h.target||1,{min:'.01',max:99999999.99,step:'.01',required:''});
   const unit = field('Unit','unit','text',h.unit||'times',{maxlength:40,required:''});
@@ -238,21 +241,17 @@ function habitEditor(h = {}) {
   const anchorMonth=selectField('Month','anchor_month',Array.from({length:12},(_,i)=>[i+1,new Intl.DateTimeFormat('en',{month:'long',timeZone:'UTC'}).format(new Date(Date.UTC(2024,i,1)))]),h.recurrence?.month||1);
   const start=choiceField('First quota period','start_choice',[['this','Start this period'],['next','Start next period']],R.activation(state.today,frequency)===state.today?'this':'next');
   const unitKind=selectField('Measure unit','measure_unit',[['minutes','Minutes'],['hours','Hours'],['litres','Litres'],['kilometres','Kilometres'],['custom','Other unit']],!h.unit?'minutes':['minutes','hours','litres','kilometres'].includes(h.unit)?h.unit:'custom');
-  const duration=durationField(h.unit==='minutes'?h.target:20,'duration_target');
-  const adjustments=node('div',{class:'duration-presets'},button('−',()=>adjust(-1),true),button('+',()=>adjust(1),true));
-  function adjust(delta){const input=target.querySelector('input');input.value=String(Math.max(input.min==='1'?1:.01,Math.round((Number(input.value||0)+delta)*100)/100));form.dispatchEvent(new Event('change'));}
-  const quantityFields=node('div',{class:'tracking-fields full'},target,adjustments,unit);
-  const summary=node('p',{class:'workspace-muted full',role:'status'}),activationNote=node('p',{class:'workspace-muted full'});
-  const preview=node('div',{class:'habit-editor-preview full','aria-hidden':'true'});name.classList.add('full');
+  const quantityFields=node('div',{class:'tracking-fields full'},target,unitKind,unit);
+  const activationNote=node('p',{class:'workspace-muted full'});
+  name.classList.add('full');
   const {form}=editor(h.habit_id?'Edit habit':'New habit',[
-    name,preview,tracking,unitKind,quantityFields,duration,repeat,mode,days,weekday,anchorDay,anchorMonth,start,activationNote,summary,icon,color,
-    disclosure('Description and category',[description,category],!!(h.description||h.category)),
+    name,icon,color,tracking,quantityFields,repeat,mode,days,weekday,anchorDay,anchorMonth,start,activationNote,
   ],async(values,form)=>{
     const frequency=values.repeat,nonDaily=['weekly','monthly','yearly'].includes(frequency),scheduleMode=nonDaily?values.schedule_mode:'scheduled';
     const schedule=frequency==='weekdays'?[...form.querySelectorAll('[name=weekday]:checked')].map(n=>Number(n.value)):[1,2,3,4,5,6,7];
     const measured=values.tracking==='measure',measureUnit=values.measure_unit==='custom'?values.unit:values.measure_unit;
-    const payload={...values,habit_id:h.habit_id,schedule_days:schedule,
-      target:values.tracking==='checkoff'?'':measured&&measureUnit==='minutes'?values.duration_target:values.target,
+    const payload={...values,habit_id:h.habit_id,schedule_days:schedule,description:h.description||'',category:h.category||null,
+      target:values.tracking==='checkoff'?'':values.target,
       unit:values.tracking==='checkoff'?'':measured?measureUnit:values.unit,
       recurrence:{frequency,mode:scheduleMode,...(scheduleMode==='scheduled'&&frequency==='weekly'?{weekday:Number(values.due_weekday)}:{}),...(scheduleMode==='scheduled'&&['monthly','yearly'].includes(frequency)?{day:Number(values.anchor_day)}:{}),...(scheduleMode==='scheduled'&&frequency==='yearly'?{month:Number(values.anchor_month)}:{})},
     };
@@ -264,23 +263,17 @@ function habitEditor(h = {}) {
   let previousFrequency=frequency;
   function sync(){
     const track=value('tracking'),freq=value('repeat'),nonDaily=['weekly','monthly','yearly'].includes(freq),quota=nonDaily&&value('schedule_mode')==='quota';
-    const measure=track==='measure',minutes=measure&&value('measure_unit')==='minutes';
-    show(unitKind,measure);show(quantityFields,track!=='checkoff'&&!minutes);show(duration,minutes);
+    const measure=track==='measure';
+    show(quantityFields,track!=='checkoff');show(unitKind,measure);
     show(unit,track==='count'||measure&&value('measure_unit')==='custom');
     target.querySelector('input').min=track==='count'?'1':'.01';target.querySelector('input').step=track==='count'?'1':'.01';
     target.querySelector('.workspace-label').textContent=({daily:'Daily',weekdays:'Daily',weekly:'Weekly',monthly:'Monthly',yearly:'Yearly'}[freq])+' target';
     show(mode,nonDaily);show(days,freq==='weekdays');show(weekday,nonDaily&&!quota&&freq==='weekly');show(anchorDay,nonDaily&&!quota&&freq!=='weekly');show(anchorMonth,nonDaily&&!quota&&freq==='yearly');show(start,!h.habit_id&&quota);
     anchorDay.querySelector('input').max=freq==='yearly'?R.monthEnd(2024,Number(value('anchor_month'))):31;
     if(!h.habit_id&&quota&&freq!==previousFrequency){form.querySelector('[name=start_choice][value="'+(R.activation(state.today,freq)===state.today?'this':'next')+'"]').checked=true;}previousFrequency=freq;
-    const r={frequency:freq,mode:quota?'quota':'scheduled',weekday:Number(value('due_weekday')),day:Number(value('anchor_day')),month:Number(value('anchor_month'))};
-    const schedule_days=freq==='weekdays'?[...choices.querySelectorAll('input:checked')].map(n=>Number(n.value)):[1,2,3,4,5,6,7];
-    const selectedUnit=measure?(value('measure_unit')==='custom'?value('unit'):value('measure_unit')):value('unit');
-    const amount=track==='checkoff'?'once':(minutes?value('duration_target'):value('target'))+' '+(selectedUnit||'units');
-    summary.textContent=(name.querySelector('input').value||'Your habit')+' · '+amount+' · '+R.label({recurrence:r,schedule_days})+'. '+(quota?'Flexible quota; excluded from Today’s percentage and the universal streak.':'Participates in Today’s percentage and the universal streak when due.');
     if(quota||h.habit_id&&(R.quota(original)||R.quota(original.pending))){const effective=h.habit_id?R.period(state.today,R.quota(original)?original.recurrence.frequency:freq).next:R.activation(state.today,freq,value('start_choice'));
       activationNote.textContent=(h.habit_id?'Change effective ':'Starts ')+effective+' · deadline '+R.period(effective,freq).end+'. '+(h.habit_id?'The current period’s rule and progress stay unchanged.':effective===state.today?'Full target applies to the remaining period; it is not prorated.':'No requirement or missed status before the start date.');
-    }else activationNote.textContent=h.habit_id?'Changes take effect today; closed history keeps its rules.':'Scheduled occurrences begin on or after '+state.today+'.';
-    const selectedIcon=value('icon'),selectedColor=value('color');preview.style.setProperty('--habit-tone',{lavender:'#e0cfe0',blue:'#c5d4e7',lime:'#d6df9c',peach:'#ead4c3',pink:'#e5cde2'}[selectedColor]);preview.replaceChildren(habitIcon(selectedIcon),node('span',{},name.querySelector('input').value||'Your habit'));
+    }else activationNote.textContent='';
   }
   if(state.recurrenceReady===false){
     repeat.querySelectorAll('input').forEach(input=>{if(['weekly','monthly','yearly'].includes(input.value))input.disabled=true;});
@@ -311,8 +304,8 @@ function cellDescription(c) {
   );
 }
 function history(h, weeks = 20, detail = false, selected = state.today) {
-  const shell = node("div", { class: "habit-history" }),
-    dates = heatmapDates(state.today, weeks),
+  const shell = node("div", { class: detail ? "habit-history" : "habit-history habit-history-strip" }),
+    dates = detail ? heatmapDates(state.today, weeks) : Array.from({length: weeks * 21}, (_, i) => shiftDay(state.today, i - weeks * 21 + 1)),
     months = node("div", { class: "heatmap-months", "aria-hidden": "true" }),
     layout = node("div", { class: "heatmap-layout" }),
     weekdays = node(
@@ -334,9 +327,14 @@ function history(h, weeks = 20, detail = false, selected = state.today) {
     });
   let cells = [];
   retry.hidden = true;
-  layout.append(weekdays, grid);
+  shell.style.setProperty('--heat-days', dates.length);
+  if (!detail) shell.style.setProperty('--heat-columns', dates.length / 3);
+  if (detail) layout.append(weekdays);
+  layout.append(grid);
   shell.append(
-    months,
+    detail ? months : node('div', {class:'habit-history-caption'},
+      node('span', {}, 'Your consistency, taking shape'),
+      node('span', {}, displayDate(dates[0], {day:'numeric',month:'short'}) + ' – ' + displayDate(dates.at(-1), {day:'numeric',month:'short'}))),
     layout,
     detail
       ? node(
@@ -365,7 +363,7 @@ function history(h, weeks = 20, detail = false, selected = state.today) {
     });
     let previous = "";
     months.replaceChildren();
-    for (let i = 0; i < dates.length; i += 7) {
+    for (let i = 0; detail && i < dates.length; i += 7) {
       const m = dates[i].slice(0, 7),
         label = node("span", {});
       if (m !== previous) {
@@ -400,7 +398,7 @@ function history(h, weeks = 20, detail = false, selected = state.today) {
     if (detail) inspect(inspector.querySelector("input").value);
   }
   grid.addEventListener("keydown", (e) => {
-    const offsets = { ArrowLeft: -7, ArrowRight: 7, ArrowUp: -1, ArrowDown: 1 };
+    const offsets = detail ? { ArrowLeft: -7, ArrowRight: 7, ArrowUp: -1, ArrowDown: 1 } : { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -dates.length / 3, ArrowDown: dates.length / 3 };
     if (!(e.key in offsets)) return;
     const list = [...grid.querySelectorAll("button")],
       index = list.indexOf(e.target),
@@ -546,9 +544,7 @@ function renderHabits() {
         : "Start tracking from today without changing earlier records.";
   const items = state.habits.filter((h) => !h.archived_on);
   const width = $("#habit-list").clientWidth,
-    cardWidth = innerWidth > 860 ? (width - 14) / 2 : width,
-    weeks = Math.max(8, Math.min(20, Math.floor((cardWidth - 56) / 19))),
-    cellSize = Math.max(10, Math.min(28, Math.floor((cardWidth - 56 - (weeks - 1) * 3) / weeks)));
+    weeks = Math.max(2, Math.min(12, Math.floor((width - 56) / 21 / 7)));
   replaceList($("#habit-list"), items.map((h) => {
       const card = node("article", {
           class: "workspace-card habit-card",
@@ -571,7 +567,6 @@ function renderHabits() {
       if(completionIcon)control.append(completionIcon);
       const icon = habitIcon(h.icon);
       control.disabled = !(h.can_record ?? h.due_today) || !!h.archived_on;
-      card.style.setProperty("--heat-cell", cellSize + "px");
       card.append(
         ...[
           node(

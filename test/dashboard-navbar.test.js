@@ -55,5 +55,5 @@ test('navbar marks exactly the current page and relies on shared assets', async(
 });
 
 test('standalone visitor templates load the local font foundation',async()=>{
- for(const view of ['index','login','signup']){const html=await render(view+'.ejs',{query:{}});assert.match(html,/href="\/css\/fonts.css"/);assert.doesNotMatch(html,/Bricolage|Playfair|fonts.googleapis.com/);}
+ for(const view of ['index','login','signup']){const html=await render(view+'.ejs',{query:{}});assert.match(html,view==='index'?/href="\/css\/fonts-authenticated.css"/:/href="\/css\/fonts.css"/);assert.doesNotMatch(html,/Bricolage|Playfair|fonts.googleapis.com/);}
 });

@@ -213,11 +213,11 @@
 }
 .workspace-dialog {
   border: var(--border);
-  border-radius: 24px;
-  background: #f7f6f0f7;
+  border-radius: 16px;
+  background: var(--surface);
   color: var(--ink);
-  padding: 1.5rem;
-  width: min(640px, calc(100% - 2rem));
+  padding: 1.1rem;
+  width: min(480px, calc(100% - 2rem));
   max-height: calc(100dvh - 3rem);
   overflow-y: auto;
   box-shadow: 0 24px 80px #22232040;
@@ -230,13 +230,21 @@
   backdrop-filter: blur(10px);
 }
 .workspace-dialog h2 {
-  font: 400 1.8rem/1.1 var(--font-display);
+  font: 400 1.3rem/1.2 var(--font-display);
   margin: 0;
   letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
-.workspace-dialog .workspace-topline {
-  margin-bottom: 1.25rem;
+.workspace-dialog > .workspace-topline {
+  margin-bottom: .85rem;
+  flex-wrap: nowrap;
 }
+.workspace-dialog-close { display:grid;place-items:center;flex-shrink:0;width:44px;min-height:44px;padding:0;border:0;border-radius:10px;background:transparent;color:var(--ink); }
+.workspace-dialog-close svg { width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round; }
+.workspace-dialog-close:hover { background:var(--line); }
+.workspace-dialog p:empty { display:none; }
+.workspace-dialog p { margin:.25rem 0; }
 .workspace-dialog {
   transition:
     opacity 180ms ease,
@@ -248,7 +256,7 @@
   translate: 0 8px;
 }
 .workspace-dialog details {
-  margin: 0.75rem 0;
+  margin: 0;
 }
 .workspace-dialog summary {
   min-height: 44px;
@@ -393,13 +401,13 @@
   cursor: pointer;
 }
 .heat-cell[data-state="completed"] {
-  background: var(--habit-accent, #4b5145);
-  border-color: var(--habit-accent, #4b5145);
+  background: var(--habit-tone, #e0cfe0);
+  border-color: var(--habit-tone, #e0cfe0);
 }
 .heat-cell[data-state="partial"],
 .heat-cell[data-state="activity"] {
-  background: var(--habit-tone, #858d70);
-  border-color: var(--habit-accent, #4b5145);
+  background: color-mix(in srgb, var(--habit-tone, #e0cfe0) 55%, var(--surface));
+  border-color: var(--habit-tone, #e0cfe0);
 }
 .heat-cell[data-state="missed"] {
   background: #e8e6df;
@@ -1109,9 +1117,6 @@
 .expense-workspace .workspace-topline {
   margin-bottom: 0.4rem;
 }
-.expense-trend .workspace-topline details {
-  font-size: 0.8rem;
-}
 .expense-trend #expense-period {
   margin: 0.35rem 0;
 }
@@ -1407,6 +1412,11 @@
 .habit-card[data-color="lime"] { --habit-tone:var(--habit-lime,#d6df9c); }
 .habit-card[data-color="peach"] { --habit-tone:var(--habit-peach,#ead4c3); }
 .habit-card[data-color="pink"] { --habit-tone:var(--habit-pink,#e5cde2); }
+.habit-card[data-color="coral"] { --habit-tone:#f0b5a5; }
+.habit-card[data-color="teal"] { --habit-tone:#a9d3cc; }
+.habit-card[data-color="yellow"] { --habit-tone:#ead990; }
+.habit-card[data-color="mint"] { --habit-tone:#b9d6b3; }
+.habit-card[data-color="lilac"] { --habit-tone:#c9b8df; }
 .header-expense-actions { display:flex;align-items:center;justify-content:flex-end;gap:.5rem;flex-wrap:wrap; }
 .savings-controls { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.6rem;margin:.75rem 0; }
 .segmented-control { display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;border:1px solid var(--line);border-radius:999px;background:var(--surface);max-width:100%; }
@@ -1537,6 +1547,26 @@
  background:var(--habit-tone);border-color:var(--habit-accent);color:var(--ink);
 }
 
+/* Three compact chronological rows per habit, tinted by its saved accent. */
+.workspace-page[data-page="habits"] #habit-list { grid-template-columns:minmax(0,1fr);gap:12px; }
+#habit-list .habit-card { min-width:0; }
+.habit-history-strip { margin:1rem 0 .65rem;--history-base:color-mix(in srgb,var(--habit-tone) 32%,var(--surface));--history-line:var(--habit-tone); }
+.habit-history-caption { display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:5px 16px;margin-bottom:12px;color:var(--muted);font-size:10px; }
+.habit-history-caption>span:first-child { text-transform:uppercase;letter-spacing:.1em;font-size:8px; }
+.habit-history-strip .heatmap-layout { display:block; }
+.habit-history-strip .habit-heatmap { width:100%;grid-template-rows:repeat(3,auto);grid-template-columns:repeat(var(--heat-columns),minmax(0,1fr));grid-auto-flow:row;grid-auto-columns:auto;gap:4px; }
+.habit-card .habit-history-strip .heat-cell { width:100%;height:auto;aspect-ratio:1;min-width:0;border-radius:2px;background:var(--history-base);border-color:transparent; }
+.habit-card .habit-history-strip .heat-cell[data-state="completed"] { background:var(--habit-tone);border-color:transparent; }
+.habit-card .habit-history-strip .heat-cell[data-state="partial"],
+.habit-card .habit-history-strip .heat-cell[data-state="activity"] { background:color-mix(in srgb,var(--habit-tone) 55%,var(--surface));border-color:var(--history-line); }
+.habit-card .habit-history-strip .heat-cell[data-state="rest"] { background:var(--history-base);border:1px dashed var(--history-line);opacity:.6; }
+.habit-card .habit-history-strip .heat-cell[data-state="unknown"],
+.habit-card .habit-history-strip .heat-cell[data-state="future"],
+.habit-card .habit-history-strip .heat-cell[data-state="before-creation"],
+.habit-card .habit-history-strip .heat-cell[data-state="not-started"] { background:var(--history-base);border:1px dotted var(--history-line);opacity:.5; }
+.habit-history-strip .workspace-status:empty { display:none; }
+@media(max-width:480px){.habit-history-strip .habit-heatmap{gap:3px}.habit-history-caption{font-size:9px}.habit-history-caption>span:first-child{font-size:7px}}
+
 /* Expense summary and compact recurring list */
 .expense-workspace > .expense-budget,.expense-workspace > .expense-spent { grid-column:span 2; }
 .expense-workspace > .expense-recurring { grid-column:span 2;background:var(--habit-lavender);min-width:0; }
@@ -1552,6 +1582,7 @@
 .expense-recurring #recurring-list { flex:0 1 auto;max-height:144px;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable; }
 .expense-recurring .recurring-row { display:grid;grid-template-columns:30px minmax(0,1fr) minmax(74px,auto) auto;align-items:center;gap:.35rem;min-height:34px;border-top:1px solid #22232020;padding:.1rem 0; }
 .recurring-service-icon { display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:#ffffff9c;color:var(--ink);font-size:.68rem;font-weight:700; }
+.recurring-brand-mark { display:grid;place-items:center;width:100%;height:100%;font-size:.9rem;font-weight:800;line-height:1; }
 .recurring-name { min-width:0;overflow-wrap:anywhere; }
 .recurring-name strong { font-size:.82rem;font-weight:600;line-height:1.2; }
 .recurring-meta { display:grid;justify-items:end;min-width:0;font-size:.72rem;line-height:1.25;font-variant-numeric:tabular-nums; }
@@ -1575,3 +1606,24 @@
 }
 .expense-workspace > :is(.expense-budget,.expense-spent,.expense-recurring) { display:flex;flex-direction:column;height:auto;min-height:0;padding-block:.65rem;align-self:stretch; }
 .expense-budget > .budget-caption,.expense-spent > .workspace-muted { margin-top:auto; }
+.expense-workspace > .expense-spent { display:grid;grid-template-rows:repeat(2,minmax(0,1fr));gap:10px;padding:0;background:transparent; }
+.expense-spent .expense-spending-item { display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.6rem .85rem;min-height:0;background:#cfe2dc; }
+.expense-spent .expense-spending-item:last-child { background:var(--habit-lime); }
+.expense-spent .expense-spending-item h2 { margin:0;font-size:1.05rem;letter-spacing:-.01em; }
+.expense-spent .expense-spending-item .workspace-number { min-width:0;margin:0;text-align:right;font-size:clamp(1.65rem,2.6vw,2.5rem);line-height:1.1; }
+.expense-budget .budget-metrics { margin:.2rem 0; }
+.expense-budget .budget-remaining { min-width:0; }
+.expense-budget .budget-remaining .workspace-number { margin:.15rem 0 0; }
+.expense-budget .budget-metrics .workspace-muted { margin:.1rem 0 0;font-size:.78rem; }
+.expense-budget .workspace-meter { margin:.35rem 0 .25rem; }
+.expense-budget .budget-caption { justify-content:flex-end;min-height:1.2em; }
+.budget-manager-dialog > .workspace-topline { margin-bottom:.75rem; }
+.budget-manager-dialog > .workspace-topline h2 { font-size:1.3rem; }
+.budget-manager-form { margin:0 0 .85rem;padding:0 0 .85rem;border-bottom:1px solid var(--line);gap:.5rem .75rem; }
+.budget-manager-form:last-child { margin:0;padding:0;border:0; }
+.budget-manager-form h3,.budget-manager-form .workspace-status { margin:0; }
+.budget-form-heading { display:flex;justify-content:space-between;align-items:center;gap:.75rem; }
+.budget-form-heading h3 { font-size:1rem; }
+.budget-month-pill { margin-left:auto;padding:.25rem .6rem;border-radius:999px;background:var(--blue);font-size:.75rem;font-weight:600;white-space:nowrap; }
+.budget-manager-form .budget-form-actions { align-self:end; }
+.budget-manager-form .workspace-status:empty { display:none; }

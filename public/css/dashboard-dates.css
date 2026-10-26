@@ -117,7 +117,7 @@
 /* Floating date navigation; native dialog keeps the dashboard inert behind it. */
 .week-calendar { display:grid;grid-template-columns:32px minmax(0,1fr) 32px auto;align-items:stretch;gap:6px; }
 .week-control { border:var(--border);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;min-height:44px;padding:.25rem .45rem; }
-.date-browser { --picker-bg:rgba(247,245,237,.96);--picker-ink:#222320;--picker-line:rgba(34,35,32,.18);box-sizing:border-box;width:min(1320px,calc(100vw - 4rem));max-height:calc(100dvh - 32px);margin:auto;padding:1rem 1.2rem;border:1px solid var(--picker-line);border-radius:20px;background:var(--picker-bg);color:var(--picker-ink);box-shadow:0 28px 64px -12px #0006,0 8px 20px #0002;overflow:hidden;animation:date-picker-in 200ms ease-out; }
+.date-browser { --picker-bg:rgba(247,245,237,.96);--picker-ink:#222320;--picker-line:rgba(34,35,32,.18);box-sizing:border-box;width:min(480px,calc(100vw - 2rem));max-height:calc(100dvh - 32px);margin:auto;padding:1rem 1.2rem;border:1px solid var(--picker-line);border-radius:16px;background:var(--picker-bg);color:var(--picker-ink);box-shadow:0 28px 64px -12px #0006,0 8px 20px #0002;overflow:hidden;animation:date-picker-in 200ms ease-out; }
 .date-browser::backdrop { background:rgba(28,28,24,.24);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);animation:date-backdrop-in 200ms ease-out; }
 @supports not (backdrop-filter:blur(1px)) { .date-browser::backdrop { background:rgba(28,28,24,.42); } }
 [data-theme=dark] .date-browser { --picker-bg:rgba(38,39,35,.97);--picker-ink:#f7f6f0;--picker-line:rgba(247,246,240,.22);--inverse-bg:#f7f6f0;--inverse-ink:#222320; }
@@ -131,7 +131,7 @@
 .marker-status { display:flex;align-items:center;gap:.5rem;min-height:24px; }
 #month-status { margin:0;font-size:.78rem;color:var(--picker-ink); }
 .date-browser #retry-month { min-height:24px;padding:.1rem .4rem;font-size:.78rem; }
-.date-browser .date-rows { position:relative;overflow-y:auto;overscroll-behavior:contain;height:min(480px,calc(100dvh - 230px));min-height:150px;scrollbar-gutter:stable;touch-action:pan-y; }
+.date-browser .date-rows { position:relative;overflow-y:auto;overscroll-behavior:contain;height:min(360px,calc(100dvh - 230px));min-height:150px;scrollbar-gutter:stable;touch-action:pan-y; }
 .date-rows button { min-height:76px;color:var(--picker-ink);border-top:1px solid var(--picker-line); }
 .date-rows button:focus-visible { outline:2px solid currentColor;outline-offset:-4px; }
 .date-rows button[aria-pressed=true] { background:var(--inverse-bg,#222320);color:var(--inverse-ink,#f7f6f0);z-index:1;box-shadow:0 16px 26px -12px #0009; }
@@ -151,8 +151,6 @@
 }
 .date-rows button { position:relative; }
 .date-rows .activity-dots { position:absolute;right:5.5rem;top:50%;translate:0 -50%; }
-
-@media (max-width:1100px) { .date-browser { width:calc(100vw - 2rem); } }
 .date-browser { max-width:calc(100vw - 2rem); }
 /* Quiet surface transitions; wheel/touch keep their native scrolling behavior. */
 .date-rows button,.date-browser button:not(.date-rows button),.week-control { transition:background-color 180ms ease-out,color 180ms ease-out,border-color 180ms ease-out,box-shadow 200ms ease-out; }

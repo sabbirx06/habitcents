@@ -56,7 +56,8 @@ function createPreviewApp() {
     if(req.scenario==='failure' && ['/dashboard-data','/get-habits','/get-expenses'].includes(req.path))return res.status(503).json({error:'Demo request failure'});
     next();
   });
-  app.get("/", (_req, res) => res.redirect(302, "/dashboard"));
+  app.get("/", (_req, res) => res.render("index"));
+  app.get(['/login', '/signup'], (req, res) => res.render(req.path.slice(1), { query: req.query }));
   app.get("/dashboard", (_req, res) => {
     res.render("dashboard", { title: "Dashboard · HabitCents", user: { name: _req.scenario==="longName"?"Alexandria Catherine Montgomery Sullivan Whitaker":_req.scenario==="emptyName"?"":"Demo User" }, page: "dashboard", demo: true });
   });

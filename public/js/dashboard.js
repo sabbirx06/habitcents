@@ -1196,13 +1196,6 @@ function centerPicker(date, focus = true, smooth = false) {
   }
   loadRangeMarkers();
 }
-function syncDateBrowserWidth() {
-  const bounds = $(".dashboard-shell")?.getBoundingClientRect?.();
-  if (bounds) {
-    $("#date-browser").style.width = bounds.width + "px";
-    $("#date-browser").style.marginLeft = bounds.left + "px";
-  }
-}
 function openDateBrowser() {
   if (view.browser) return;
   if (closeTimer) {
@@ -1226,7 +1219,6 @@ function openDateBrowser() {
     document.body.style.overflow = "hidden";
     if (gap > 0) document.body.style.paddingRight = gap + "px";
   }
-  syncDateBrowserWidth();
   dialog.showModal?.();
   $("#browse-dates").setAttribute("aria-expanded", "true");
   centerPicker(view.mode === "history" ? view.selected : readLocalDay());
@@ -1322,7 +1314,6 @@ function extendPicker() {
 function bindDateBrowser() {
   if (typeof window !== "undefined")
     window.addEventListener("resize", () => {
-      if (view.browser) syncDateBrowserWidth();
       if (recentExpenseRows && view.mode !== "history") renderRecentExpenses(recentExpenseRows);
       if (!$("#spending-chart")?.hidden) updateSpendingScale();
     });

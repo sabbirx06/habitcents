@@ -124,19 +124,6 @@ export function choiceField(label, name, options, value, variant = 'segments') {
       return node('label', {}, input, decoration, swatch, node('span', {}, title));
     })));
 }
-export function disclosure(title, children, open = false) {
-  return node('details', { class: 'form-disclosure full', ...(open ? { open: '' } : {}) }, node('summary', {}, title), node('div', { class: 'form-disclosure-fields' }, children));
-}
-export function durationField(value = 20, name = 'target') {
-  const numeric = field('Duration · minutes', name, 'number', value || 20, { min: '.01', max: 99999999.99, step: '.01', required: '' });
-  const input = numeric.querySelector('input');
-  const slider = node('input', { type: 'range', min: '.01', max: Math.max(120, Number(value) || 20), step: '.01', value: value || 20, 'aria-label': 'Duration in minutes' });
-  const sync = () => { if (Number.isFinite(input.valueAsNumber)) { slider.max = Math.max(120, input.valueAsNumber); slider.value = input.value; } };
-  input.addEventListener('input', sync);
-  slider.addEventListener('input', () => { input.value = String(Math.max(.01,Math.round(Number(slider.value)))); input.dispatchEvent(new Event('input', { bubbles: true })); });
-  const presets = node('div', { class: 'duration-presets', role: 'group', 'aria-label': 'Duration presets' }, [10,20,30,60].map(minutes => button(minutes + ' min', () => { input.value = String(minutes); sync(); }, true)));
-  return node('div', { class: 'duration-field full' }, numeric, slider, presets);
-}
 let calendarSerial = 0;
 export function calendarField(label, name, value = '', attrs = {}) {
   const id = 'form-calendar-' + ++calendarSerial;
@@ -229,7 +216,16 @@ export function modal(title, content, { onClose } = {}) {
       class: "workspace-dialog",
       "aria-labelledby": "workspace-dialog-title",
     }),
-    close = button("Close ×", () => dialog.close(), true);
+    close = button("", () => dialog.close(), true);
+  close.className = "workspace-dialog-close";
+  close.setAttribute("aria-label", "Close");
+  const closeIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  closeIcon.setAttribute("viewBox", "0 0 24 24");
+  closeIcon.setAttribute("aria-hidden", "true");
+  const closePath = document.createElementNS(closeIcon.namespaceURI, "path");
+  closePath.setAttribute("d", "M6 6l12 12M6 18L18 6");
+  closeIcon.append(closePath);
+  close.append(closeIcon);
   dialog.append(
     node(
       "div",

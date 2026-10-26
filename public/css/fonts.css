@@ -1,9 +1,4 @@
-@font-face{font-family:Geist;src:url('/fonts/geist-400.ttf') format('truetype');font-weight:400;font-display:swap}
-@font-face{font-family:Geist;src:url('/fonts/geist-500.ttf') format('truetype');font-weight:500;font-display:swap}
-@font-face{font-family:Geist;src:url('/fonts/geist-600.ttf') format('truetype');font-weight:600;font-display:swap}
-@font-face{font-family:Geist;src:url('/fonts/geist-700.ttf') format('truetype');font-weight:700;font-display:swap}
-@font-face{font-family:'Geist Mono';src:url('/fonts/geist-mono-400.ttf') format('truetype');font-weight:400;font-display:swap}
-@font-face{font-family:'Geist Mono';src:url('/fonts/geist-mono-500.ttf') format('truetype');font-weight:500;font-display:swap}
-:root{--font-sans:Geist,Arial,sans-serif;--font-mono:'Geist Mono',Consolas,monospace}
+@font-face{font-family:'Instrument Sans';src:url('/fonts/InstrumentSans-variable.ttf') format('truetype');font-style:normal;font-weight:400 700;font-display:swap}
+:root{--font-sans:'Instrument Sans',Arial,sans-serif;--font-mono:Consolas,monospace}
 body{font-family:var(--font-sans)}
 button,input,select,textarea{font:inherit}

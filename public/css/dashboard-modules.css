@@ -37,7 +37,7 @@
 .progress-panel .completion-number { margin:.2rem 0; }
 .progress-panel .muted-copy { margin-top:.15rem; }
 .quick-entry-panel .expense-form { grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem .75rem;margin-top:.55rem;align-items:start; }
-.quick-entry-panel .primary-action { grid-column:1/-1; }
+.quick-entry-panel .primary-action { grid-column:1/-1;justify-self:stretch;justify-content:center;width:100%;border-radius:10px; }
 .quick-entry-panel .description-field,.quick-entry-panel .expense-date-field { grid-column:auto;align-self:end; }
 .quick-entry-panel .expense-form label { line-height:1.2;margin-bottom:.35rem; }
 .expense-form select,.continuity-change select,.continuity-help select { min-width:0;width:100%;min-height:44px;border:1px solid #bdbeb2;border-radius:10px;background:var(--surface);color:var(--ink);padding:.4rem .5rem;font:inherit; }

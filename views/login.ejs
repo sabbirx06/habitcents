@@ -9,16 +9,15 @@
     <link rel="stylesheet" href="/css/motion-preference.css" />
     <link rel="stylesheet" href="/css/fonts.css" />
     <link rel="stylesheet" href="/css/auth.css" />
-    <link rel="icon" href="/media/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/brand.css" />
+    <link rel="icon" href="/logo/habitcents-icon-h-transparent.svg" type="image/svg+xml" />
   </head>
   <body class="auth-page">
     <main class="auth-layout">
       <aside class="auth-art" aria-label="HabitCents">
-        <a class="auth-brand" href="/" aria-label="HabitCents home">HabitCents<span aria-hidden="true">®</span></a>
+        <a class="auth-brand" href="/" aria-label="HabitCents home"><%- include('partials/brand', {variant: 'wordmark'}) %></a>
         <div class="art-guides" aria-hidden="true"></div>
-        <svg class="auth-symbol" viewBox="0 0 160 160" fill="none" aria-hidden="true">
-          <path d="M80 2V63M80 97V158M2 80H63M97 80H158M39 39L68 68M92 92L121 121M39 121L68 92M92 68L121 39" stroke="currentColor" stroke-width="5"/>
-        </svg>
+        <div class="auth-symbol" aria-hidden="true"><%- include('partials/brand', {variant: 'mark'}) %></div>
         <small class="auth-copyright">© HabitCents. All rights reserved.</small>
       </aside>
       <section class="auth-content" aria-labelledby="auth-title">

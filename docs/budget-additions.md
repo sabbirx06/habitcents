@@ -1,0 +1,21 @@
+# Budget management
+
+The Expenses budget card has one **Manage budget** button. Its compact dialog shows the **Edit budget** form first, with the selected month in a pill at the right of its heading, then the **Add money** form. Descriptions and recent additions are omitted. Both forms save in place; adding money updates the total in Edit budget. Saves are serialized across the two forms.
+
+Add money records a positive amount, source and date, and increases the monthly total and remaining budget. Dates must belong to the selected month and cannot be in the future. A first addition creates the monthly budget if none exists. Saved additions survive changing the total with Edit budget; that action replaces the entire current total, including additions. History describes recorded additions, rather than a breakdown of the current total. Existing budgets have no invented addition history.
+
+`migrations/006-budget-additions.sql` creates the owned history table and index without changing existing budget totals or expenses. Apply it once to an existing PostgreSQL installation after reviewing and backing up the database. Do not rerun the initial schema. Live activation and any running server reload require separate authorization under `docs/workspace-redesign.md`.
+
+Budget increases and history inserts commit together. Per-account locks serialize additions and setting a total. A per-account request key makes retries of the same submission safe; different details with an already-used key return a conflict. The resulting budget cannot exceed the existing NUMERIC(10,2) limit. Account JSON exports include all recorded additions. The history endpoint remains available, but the dialog no longer fetches it.
+
+The database-free preview implements the same form and addition semantics in memory. The normal expenses page and Edit budget still work before migration 006; an Add money save reports an error if its storage is unavailable.
+
+Validation: `node --test test/budget-additions.test.js test/workspaces.test.js test/workspace-ui.test.js test/server-postgres.test.js`. These cover real PostgreSQL-compatible SQL, exact amounts, validation, retries, isolation, overflow, rollback after a history-write failure, preview behavior, existing expenses and template contracts. They do not assert a browser visual review or activation against the configured live database.
+
+## Authorized activation · 26 October 2026
+
+The user separately approved applying migration 006 to the configured Supabase database and reloading the local app. Migration 006 committed successfully on PostgreSQL 17.11. Its history table was empty after installation, with all eight required columns, both validated foreign keys/checks, three valid indexes and RLS enabled. Existing application catalogs, original row counts/fingerprints, financial totals and identity sequence values matched the backup baseline both before commit and through a fresh read-only connection afterward.
+
+A full public-schema/data backup is stored privately at `.cache/db-activation/20261026-230030-budget-additions/before-006.dump`, alongside a manifest, recovery instructions and restoration list. The directory ACL allows the executing Windows operator and SYSTEM only. `pg_restore` listed every public table and decoded the entire archive; no restored-instance rehearsal or live restore was performed. The backup excludes Supabase-managed auth/storage schemas and cluster roles. A brief database write lock protected the original application tables during verification and the additive migration.
+
+The normal local server on port 3000 was restarted to load the new routes. A fresh read-only readiness check confirmed GET `/login` returned 200, the new additions endpoint redirected anonymous requests to the login page, and the served expense module contained Manage budget. The initial readiness check expected a login URL without the app's error query; that check was corrected and the fresh check passed. No live authentication, sample additions, account edits, seeds, resets or remote deployment were performed. The development server uses memory sessions, so users may need to sign in again. No manual Supabase SQL remains for this activation.
