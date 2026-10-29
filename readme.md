@@ -1,6 +1,6 @@
 # HabitCents – Habit & Expense Tracker
 
-Android beta: [download the signed beta APK](https://github.com/sabbirx06/habitcents/releases/tag/v1.0.0-beta.1). Website: https://habitcents.duckdns.org. See [beta installation and release instructions](docs/beta-release.md).
+Android beta: [download the signed beta APK](https://github.com/sabbirx06/habitcents/releases/tag/v1.0.0-beta.2). Website: https://habitcents.duckdns.org. See [beta installation and release instructions](docs/beta-release.md).
 
 Android: [build and run the mobile app locally](docs/android.md). The app uses the existing mobile views; no hosted server is required for testing over wireless debugging.
 

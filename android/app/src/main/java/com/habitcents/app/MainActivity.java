@@ -34,6 +34,7 @@ public class MainActivity extends Activity {
     private ProgressBar progress;
     private String retryUrl = BuildConfig.APP_URL + "/dashboard";
     private boolean failed;
+    private AppUpdater updater;
 
     private boolean isAppUrl(String url) {
         Uri target = Uri.parse(url), origin = Uri.parse(BuildConfig.APP_URL);
@@ -43,6 +44,7 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        updater = new AppUpdater(this);
         getWindow().setDecorFitsSystemWindows(false);
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.rgb(222, 219, 212));
@@ -136,6 +138,6 @@ public class MainActivity extends Activity {
     @Override public void onBackPressed() { goBack(); }
     @Override protected void onSaveInstanceState(Bundle state) { super.onSaveInstanceState(state); web.saveState(state); }
     @Override protected void onPause() { CookieManager.getInstance().flush(); web.onPause(); super.onPause(); }
-    @Override protected void onResume() { super.onResume(); if (web != null) web.onResume(); }
-    @Override protected void onDestroy() { web.destroy(); super.onDestroy(); }
+    @Override protected void onResume() { super.onResume(); if (web != null) web.onResume(); if (updater != null) updater.resume(); }
+    @Override protected void onDestroy() { if (updater != null) updater.destroy(); web.destroy(); super.onDestroy(); }
 }

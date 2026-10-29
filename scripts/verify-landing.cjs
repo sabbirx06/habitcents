@@ -73,7 +73,7 @@ const { createPreviewApp } = require('../preview-server');
     await evaluate('Promise.all([...document.images].filter(i=>i.loading!=="lazy").map(i=>i.decode()))');
     assert.equal(await evaluate('document.querySelectorAll("h1").length'),1);
     assert.equal(await evaluate('document.querySelectorAll(".header-actions a").length'),2);
-    assert.equal(await evaluate('document.querySelector(".button-android").getAttribute("href")'),'https://github.com/sabbirx06/habitcents/releases/tag/v1.0.0-beta.1');
+    assert.equal(await evaluate('document.querySelector(".button-android").getAttribute("href")'),'https://github.com/sabbirx06/habitcents/releases/tag/v1.0.0-beta.2');
     assert.ok(await evaluate('document.querySelector("#android-status").textContent.includes("Android 11")'));
     assert.ok(await evaluate('document.querySelector(".site-footer").textContent.includes("Team Alpha")'));
     assert.ok(await evaluate('[...document.images].filter(i=>i.closest(".brand-wordmark,.brand-mark")).every(i=>i.src.endsWith(".svg")&&i.complete&&i.naturalWidth)'));

@@ -1,0 +1,20 @@
+// Prepare the signed APK assets and the update feed; publish assets before deploying the feed.
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),assert=require('node:assert/strict');
+const metadata=JSON.parse(fs.readFileSync('android/app/build/outputs/apk/beta/output-metadata.json','utf8'));
+assert.equal(metadata.applicationId,'com.habitcents.app.beta');
+assert.equal(metadata.elements.length,1);
+const build=metadata.elements[0],version=build.versionName;
+assert.match(version,/^\d+\.\d+\.\d+-beta\.\d+$/);
+assert.ok(Number.isSafeInteger(build.versionCode)&&build.versionCode>0);
+const summary=process.argv[2];assert.ok(summary&&summary.length<=2000,'Supply a short update summary.');
+const apk=fs.readFileSync(path.join('android/app/build/outputs/apk/beta',build.outputFile));
+assert.ok(apk.length>0&&apk.length<=50*1024*1024);
+const name=`HabitCents-${version}.apk`,tag='v'+version,sha256=crypto.createHash('sha256').update(apk).digest('hex');
+const minSdk=Number(fs.readFileSync('android/app/build.gradle','utf8').match(/\bminSdk\s+(\d+)/)[1]);
+const manifest={packageId:metadata.applicationId,versionCode:build.versionCode,versionName:version,minSdk,size:apk.length,sha256,apkUrl:`https://github.com/sabbirx06/habitcents/releases/download/${tag}/${name}`,summary};
+const directory=path.join('.cache/releases',tag);fs.mkdirSync(directory,{recursive:true});fs.mkdirSync('public/updates',{recursive:true});
+fs.writeFileSync(path.join(directory,name),apk);
+fs.writeFileSync(path.join(directory,'SHA256SUMS.txt'),`${sha256}  ${name}\n`);
+fs.writeFileSync(path.join(directory,'android-beta.json'),JSON.stringify(manifest,null,2)+'\n');
+fs.writeFileSync('public/updates/android-beta.json',JSON.stringify(manifest,null,2)+'\n');
+console.log(JSON.stringify({tag,directory,versionCode:build.versionCode,sha256},null,2));
