@@ -22,7 +22,7 @@ android {
         applicationId 'com.habitcents.app'
         minSdk 30
         targetSdk 36
-        versionCode 3
+        versionCode 4
         versionName '1.0.0'
         manifestPlaceholders = [appLabel: 'HabitCents']
         buildConfigField 'String', 'APP_URL', '"' + appUrl.replaceAll('/$', '') + '"'
@@ -44,7 +44,7 @@ android {
         beta {
             initWith release
             applicationIdSuffix '.beta'
-            versionNameSuffix '-beta.2'
+            versionNameSuffix '-beta.3'
             manifestPlaceholders = [appLabel: 'HabitCents Beta']
         }
     }

@@ -1,10 +1,10 @@
 {
   "packageId": "com.habitcents.app.beta",
-  "versionCode": 3,
-  "versionName": "1.0.0-beta.2",
+  "versionCode": 4,
+  "versionName": "1.0.0-beta.3",
   "minSdk": 30,
   "size": 94917,
-  "sha256": "ecde3d031219fd2e3fe5ea72c41a2934771486a6962d309695ebbc2fbc9ae218",
-  "apkUrl": "https://github.com/sabbirx06/habitcents/releases/download/v1.0.0-beta.2/HabitCents-1.0.0-beta.2.apk",
-  "summary": "A fresh app icon. Updates, right here in HabitCents."
+  "sha256": "4c14ded693442622a93861d969d1e70fdefcc7da230cdb94e5cd34059059b819",
+  "apkUrl": "https://github.com/sabbirx06/habitcents/releases/download/v1.0.0-beta.3/HabitCents-1.0.0-beta.3.apk",
+  "summary": "A small update to preview the new update screen."
 }
