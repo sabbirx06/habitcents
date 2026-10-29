@@ -440,20 +440,17 @@
 .heat-cell:hover {
   box-shadow: 0 0 0 1px var(--ink);
 }
-.history-inspection {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin: 0.6rem 0;
-}
-.history-inspection input {
-  width: auto;
-}
 .heatmap-detail {
-  overflow-x: auto;
+  min-width: 0;
   padding: 0.5rem 0;
 }
+.history-contributions {
+  max-width:100%;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  padding:3px;
+}
+.history-contributions .heatmap-layout,.history-contributions .heatmap-months { width:max-content; }
 .heatmap-detail .habit-history {
   --heat-cell: 12px;
 }
@@ -1047,12 +1044,16 @@
   font-size: 0.8rem;
 }
 .habit-details.workspace-button {
+  display:grid;
+  place-items:center;
+  width:44px;
   border: 0;
   background: transparent;
   color: var(--muted);
   padding: 0.3rem;
   border-radius: 8px;
 }
+.habit-details svg { width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round; }
 .habit-details.workspace-button:hover {
   background: #2223200d;
 }
@@ -1339,6 +1340,9 @@
   min-height: 44px;
   align-items: center;
 }
+.expense-collapse-heading { padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer; }
+.expense-collapse-heading:hover { text-decoration:underline;text-underline-offset:3px; }
+.expense-collapse-heading:focus-visible { outline:2px solid var(--ink);outline-offset:3px; }
 @media (min-width: 651px) {
   .expense-trend .workspace-y, .expense-trend .workspace-bars { height: 100px; }
 }
@@ -1365,9 +1369,16 @@
 }
 @media (max-width: 650px) {
   .workspace-header h1 { font-size: 1.65rem; }
+  .expense-transactions { display:flex;flex-direction:column;height:500px;min-height:0; }
+  .expense-transactions > .workspace-topline { flex:0 0 auto; }
+  .expense-transactions > .transactions { flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable; }
+  .category-layout { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
+  .category-layout .category-donut { width: min(100%, 112px); }
+  .category-legend button { grid-template-columns: 10px minmax(0, 1fr) auto auto; gap: 0.35rem; min-height: 36px; padding: 0.25rem 0; font-size: 0.8rem; }
+  .category-legend button > span:last-child { grid-column: auto; font-size: 0.75rem; color: var(--ink); }
   .expense-budget .workspace-topline { gap: 0; }
-  .expense-budget .workspace-topline h2 { font-size: 1rem; flex-basis: 100%; }
-  .expense-budget #budget-edit { min-height: 36px; font-size: 0.85rem; }
+  .expense-budget .workspace-topline h2 { flex: 1 1 auto; min-width: 0; font-size: 1rem; }
+  .expense-budget #budget-edit { min-height: 36px; margin-left: auto; font-size: 0.85rem; }
   .expense-budget .workspace-number { font-size: 2.25rem; }
   .expense-spent .workspace-number { font-size: 2.1rem; }
   .habit-summary-card .workspace-number { font-size: 2.25rem; }
@@ -1529,8 +1540,8 @@
 @media(max-width:650px) {
  .header-expense-actions { justify-content:flex-start; }
  .expense-budget .workspace-topline { gap:0; }
- .expense-budget .workspace-topline h2 { font-size:1rem;flex-basis:100%; }
- .expense-budget #budget-edit { min-height:36px;font-size:.85rem; }
+ .expense-budget .workspace-topline h2 { flex:1 1 auto;min-width:0;font-size:1rem; }
+ .expense-budget #budget-edit { min-height:36px;margin-left:auto;font-size:.85rem; }
  .expense-budget .workspace-number { font-size:2.25rem; }
  .expense-spent .workspace-number { font-size:2.1rem; }
  .habit-summaries { grid-template-columns:repeat(2,minmax(0,1fr));gap:10px; }
@@ -1567,6 +1578,29 @@
 .habit-card .habit-history-strip .heat-cell[data-state="not-started"] { background:var(--history-base);border:1px dotted var(--history-line);opacity:.5; }
 .habit-history-strip .workspace-status:empty { display:none; }
 @media(max-width:480px){.habit-history-strip .habit-heatmap{gap:3px}.habit-history-caption{font-size:9px}.habit-history-caption>span:first-child{font-size:7px}}
+@media(max-width:760px) {
+ #habit-list .habit-card { padding:1rem;border:0;border-radius:16px;box-shadow:0 5px 14px -5px #22232030; }
+ .habit-history-strip { --heat-cell:14px;--heat-gap:3px; }
+ .habit-history-strip .heatmap-layout { display:flex; }
+ .habit-history-strip .habit-heatmap { width:max-content;grid-template-columns:none;grid-template-rows:repeat(7,14px);grid-auto-flow:column;grid-auto-columns:14px;gap:3px; }
+ .habit-card .habit-history-strip .heat-cell { width:14px;height:14px; }
+ .habit-history-caption>span:first-child { display:none; }
+ .habit-history-caption>span:last-child { margin-left:auto; }
+}
+@media(max-width:760px) {
+ .habit-summaries .habit-completion-card { order:0; }
+ .habit-summaries .habit-streak-card { order:1; }
+ .habit-summaries .habit-progress-card { order:2; }
+ .habit-progress-card { display:grid;grid-template-columns:auto minmax(0,1fr);align-items:baseline;column-gap:.6rem; }
+ .habit-progress-card .habit-card-topline { grid-column:1/-1; }
+ .habit-progress-card .completion-number { grid-column:1;grid-row:2; }
+ .habit-progress-card #habit-summary-context { grid-column:2;grid-row:2;justify-self:end;text-align:right;margin:0;font-size:.85rem; }
+ .habit-progress-card .workspace-meter { grid-column:1/-1;grid-row:3; }
+}
+@media(max-width:650px) {
+ .habit-summaries .habit-completion-card { grid-column:auto; }
+ .habit-summaries .habit-progress-card { grid-column:1/-1; }
+}
 
 /* Expense summary and compact recurring list */
 .expense-workspace > .expense-budget,.expense-workspace > .expense-spent { grid-column:span 2; }

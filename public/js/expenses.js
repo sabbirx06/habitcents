@@ -36,7 +36,7 @@ let data = null,
   initialized = false,
   chartView = "bar";
 try {
-  chartView = localStorage.getItem("habitcents-category-chart") === "circle" ? "circle" : "bar";
+  chartView = globalThis.matchMedia?.("(max-width: 650px)").matches ? "bar" : localStorage.getItem("habitcents-category-chart") === "circle" ? "circle" : "bar";
 } catch {}
 export function aggregateExpenses(expenses) {
   const byDate = new Map(),
@@ -310,7 +310,7 @@ function renderTransactions() {
             ? a.date.localeCompare(b.date)
             : b.date.localeCompare(a.date),
     );
-  $("#transaction-count").textContent = items.length + " of " + data.expenses.length + " entries";
+  $("#transaction-count").textContent = items.length + " entries";
   $("#expense-list").replaceChildren(
     ...items.map((e) => {
       const c = categories[e.category] || categories.uncategorized,
@@ -598,6 +598,18 @@ export function initExpenses() {
   helpButton.addEventListener("keydown", (event) => {
     if (event.key === "Escape") { hideHelp(); event.stopPropagation(); }
   });
+  for (const [buttonId, contentId, label] of [
+    ["spending-collapse", "expense-trend-content", "Spending over time"],
+    ["category-collapse", "expense-category-content", "By category"],
+  ]) {
+    const toggle = $("#" + buttonId), content = $("#" + contentId);
+    toggle.addEventListener("click", () => {
+      const expanded = toggle.getAttribute("aria-expanded") === "true";
+      toggle.setAttribute("aria-expanded", String(!expanded));
+      toggle.setAttribute("aria-label", (expanded ? "Expand " : "Collapse ") + label);
+      content.hidden = expanded;
+    });
+  }
   bindWorkspaceRefresh(() => {
     loadExpenses();
     loadRecurring();

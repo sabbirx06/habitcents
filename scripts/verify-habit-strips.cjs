@@ -78,13 +78,14 @@ const { createPreviewApp } = require('../preview-server');
           chronological:cells.every((c,i)=>i===0 || new Date(c.dataset.date)-new Date(cells[i-1].dataset.date)===86400000),
           first:cells[0].dataset.date,last:cells.at(-1).dataset.date};
       })`);
-      assert.ok(rows.length>=3);assert.ok(rows.every(r=>r.rowCount===3&&r.square&&r.chronological&&r.count>=42));
+      assert.ok(rows.length>=3);assert.ok(rows.every(r=>r.rowCount===(width<=760?7:3)&&r.square&&r.chronological&&r.count>=42));
       assert.ok(rows.every(r=>r.left===rows[0].left));assert.ok(rows.every((r,i)=>i===0||r.top>rows[i-1].top));
       assert.ok(await evaluate('document.documentElement.scrollWidth<=document.documentElement.clientWidth'));
+      assert.ok(await evaluate(`Array.from(document.querySelectorAll('#habit-list .heatmap-months')).every(months=>{const labels=[...months.children].filter(label=>label.textContent);return labels.every((label,i)=>{const range=document.createRange();range.selectNodeContents(label);return i===labels.length-1||range.getBoundingClientRect().right<=labels[i+1].getBoundingClientRect().left;});})`),'Month labels do not overlap');
       const colors=await evaluate('[...document.querySelectorAll("#habit-list .habit-card")].map(c=>getComputedStyle(c.querySelector(".heat-cell[data-state=completed]")).backgroundColor)');
       assert.equal(new Set(colors).size,colors.length,'Each sample habit uses its own history color');
       assert.ok(await evaluate('[...document.querySelectorAll("#habit-list .habit-card")].every(c=>getComputedStyle(c.querySelector(".heat-cell[data-state=completed]")).backgroundColor===getComputedStyle(c.querySelector(".habit-schedule")).backgroundColor)'), 'Completed history cells exactly match the selected habit color');
-      await screenshot('habits-'+width);checks.push(width+'px: three square-cell rows per habit, distinct habit colors, chronological dates, no page overflow');
+      await screenshot('habits-'+width);checks.push(width+'px: '+(width<=760?'seven weekday rows sized to available width':'three square-cell rows')+', distinct habit colors, chronological dates, no page overflow');
     }
     await viewport(1440);await go('/habits');
     await wait('document.querySelector("#habit-list .heat-cell[data-state=completed]") !== null');

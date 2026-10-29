@@ -304,14 +304,15 @@ function cellDescription(c) {
   );
 }
 function history(h, weeks = 20, detail = false, selected = state.today) {
+  const calendar = detail || window.innerWidth <= 760;
   const shell = node("div", { class: detail ? "habit-history" : "habit-history habit-history-strip" }),
-    dates = detail ? heatmapDates(state.today, weeks) : Array.from({length: weeks * 21}, (_, i) => shiftDay(state.today, i - weeks * 21 + 1)),
+    dates = calendar ? heatmapDates(state.today, weeks) : Array.from({length: weeks * 21}, (_, i) => shiftDay(state.today, i - weeks * 21 + 1)),
     months = node("div", { class: "heatmap-months", "aria-hidden": "true" }),
     layout = node("div", { class: "heatmap-layout" }),
     weekdays = node(
       "div",
       { class: "heatmap-weekdays", "aria-hidden": "true" },
-      names().map((n, i) => node("span", {}, i % 2 === 0 ? n[0] : "")),
+      names().map((n, i) => node("span", {}, i % 2 === 0 ? calendar && !detail ? n : n[0] : "")),
     ),
     grid = node("div", {
       class: "habit-heatmap",
@@ -320,38 +321,22 @@ function history(h, weeks = 20, detail = false, selected = state.today) {
     }),
     feedback = node("p", { class: "workspace-status", role: "status" }),
     retry = button("Retry history", () => load(), true),
-    output = node("output", { class: detail ? "workspace-muted" : "workspace-sr-only" }),
-    inspector = field("Inspect a date", "inspect", "date", selected, {
-      min: dates[0],
-      max: dates.at(-1),
-    });
+    output = node("output", { class: "workspace-sr-only" });
   let cells = [];
   retry.hidden = true;
   shell.style.setProperty('--heat-days', dates.length);
   if (!detail) shell.style.setProperty('--heat-columns', dates.length / 3);
-  if (detail) layout.append(weekdays);
+  if (calendar) layout.append(weekdays);
   layout.append(grid);
-  shell.append(
-    detail ? months : node('div', {class:'habit-history-caption'},
+  const heading = calendar ? months : node('div', {class:'habit-history-caption'},
       node('span', {}, 'Your consistency, taking shape'),
-      node('span', {}, displayDate(dates[0], {day:'numeric',month:'short'}) + ' – ' + displayDate(dates.at(-1), {day:'numeric',month:'short'}))),
-    layout,
-    detail
-      ? node(
-          "div",
-          { class: "history-inspection" },
-          inspector,
-          button("Inspect", () => inspect(inspector.querySelector("input").value), true),
-        )
-      : document.createTextNode(""),
+      node('span', {}, displayDate(dates[0], {day:'numeric',month:'short'}) + ' – ' + displayDate(dates.at(-1), {day:'numeric',month:'short'})));
+  shell.append(
+    ...(detail ? [node('div', {class:'history-contributions'}, heading, layout)] : [heading, layout]),
     output,
     feedback,
     retry,
   );
-  function inspect(day) {
-    const c = cells.find((c) => c.date === day);
-    if (c) output.textContent = cellDescription(c);
-  }
   function paint(records = [], versions = [], available = false) {
     cells = habitCells({
       dates,
@@ -363,11 +348,12 @@ function history(h, weeks = 20, detail = false, selected = state.today) {
     });
     let previous = "";
     months.replaceChildren();
-    for (let i = 0; detail && i < dates.length; i += 7) {
+    for (let i = 0; calendar && i < dates.length; i += 7) {
       const m = dates[i].slice(0, 7),
         label = node("span", {});
       if (m !== previous) {
-        label.textContent = displayDate(dates[i], { month: "short" });
+        if (detail || (i + 7 < dates.length && dates[i + 7].slice(0, 7) === m))
+          label.textContent = displayDate(dates[i], { month: "short" });
         previous = m;
       }
       months.append(label);
@@ -380,7 +366,7 @@ function history(h, weeks = 20, detail = false, selected = state.today) {
             class: "heat-cell",
             "data-state": c.state,
             "data-date": c.date,
-            tabindex: i === dates.indexOf(state.today) ? 0 : -1,
+            tabindex: i === dates.indexOf(detail ? selected : state.today) ? 0 : -1,
             "aria-label": label,
             title: label,
             onfocus: () => {
@@ -388,17 +374,15 @@ function history(h, weeks = 20, detail = false, selected = state.today) {
             },
             onclick: () => {
               if (!detail) return details(h, c.date);
-              inspector.querySelector("input").value = c.date;
               output.textContent = label;
             },
           });
         return b;
       }),
     );
-    if (detail) inspect(inspector.querySelector("input").value);
   }
   grid.addEventListener("keydown", (e) => {
-    const offsets = detail ? { ArrowLeft: -7, ArrowRight: 7, ArrowUp: -1, ArrowDown: 1 } : { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -dates.length / 3, ArrowDown: dates.length / 3 };
+    const offsets = calendar ? { ArrowLeft: -7, ArrowRight: 7, ArrowUp: -1, ArrowDown: 1 } : { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -dates.length / 3, ArrowDown: dates.length / 3 };
     if (!(e.key in offsets)) return;
     const list = [...grid.querySelectorAll("button")],
       index = list.indexOf(e.target),
@@ -410,17 +394,6 @@ function history(h, weeks = 20, detail = false, selected = state.today) {
       next.focus();
     }
   });
-  const help = node(
-    "details",
-    {},
-    node("summary", {}, "Cell states"),
-    node(
-      "p",
-      { class: "workspace-muted" },
-      "Filled: completed. Muted fill: partial. Outline: known scheduled day without completion. Dashed: rest day. Dotted: unknown or future. Legacy dates stay unknown unless a completion is recorded. History is read-only.",
-    ),
-  );
-  if (detail) shell.append(help);
   paint();
   let request = 0;
   async function load() {
@@ -470,11 +443,6 @@ function details(h, selected = state.today) {
   scroll.append(history(h, 52, true, selected));
   box.append(
     scroll,
-    node(
-      "p",
-      { class: "workspace-muted" },
-      "Historical check-ins are read-only. Quota edits take effect next period; daily/scheduled edits apply today.",
-    ),
     node(
       "div",
       { class: "recurring-actions" },
@@ -544,7 +512,9 @@ function renderHabits() {
         : "Start tracking from today without changing earlier records.";
   const items = state.habits.filter((h) => !h.archived_on);
   const width = $("#habit-list").clientWidth,
-    weeks = Math.max(2, Math.min(12, Math.floor((width - 56) / 21 / 7)));
+    weeks = window.innerWidth <= 760
+      ? Math.max(2, Math.min(52, Math.floor((width - 56) / 17)))
+      : Math.max(2, Math.min(12, Math.floor((width - 56) / 21 / 7)));
   replaceList($("#habit-list"), items.map((h) => {
       const card = node("article", {
           class: "workspace-card habit-card",
@@ -618,9 +588,11 @@ function renderHabits() {
               {
                 type: "button",
                 class: "workspace-button secondary habit-details",
+                "aria-label": "View history for " + h.habit_name,
+                title: "View history",
                 onclick: () => details(h),
               },
-              "View history ↗",
+              globalThis.HabitIcons?.svg("history"),
             ),
           ),
         ].filter(Boolean),
