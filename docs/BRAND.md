@@ -58,9 +58,8 @@ downloadable app or bank integration.
 The single page has minimal account navigation, a centered hero, one dashboard
 screenshot, a four-feature explorer (Dashboard, Habits, Money, Savings), and a
 footer reading “Made with ♥ by Team Alpha.” Signup/login links use the existing
-account routes. Android is a disabled “Coming later” button with an explicit note
-that development has not started. There is no download, waitlist, or fabricated
-release date.
+account routes. Android links to the signed GitHub beta prerelease, with an
+Android 11 minimum-version note. The footer links to the same release notes.
 
 The hero rotates one word: habits → money → savings. Its fixed measurement slot
 reserves the longest word's width, and a stable accessible heading mentions all
@@ -80,8 +79,8 @@ The landing page adds no framework or third-party runtime dependency.
 Run `node scripts/verify-landing.cjs` on Windows with installed Chrome (or set
 `CHROME_PATH`). It creates an isolated local preview and disposable headless
 profile, checks 320/390/768/1024/1440px layouts, all four feature tabs, actual
-word rotation and pause/resume, reduced motion, image loading, and the disabled
-Android button. Screenshots/results go into
+word rotation and pause/resume, reduced motion, image loading, and the
+Android beta download link. Screenshots/results go into
 ignored `.cache/landing-review/`. The preview server now serves the landing page
 at `/` and supports viewing the account forms; preview account submissions
 remain unavailable.

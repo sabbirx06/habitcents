@@ -26,8 +26,8 @@
     <section class="hero wrap" aria-labelledby="hero-title">
       <h1 id="hero-title"><span class="sr-only">Your habits, money, and savings.</span><span aria-hidden="true"><span class="hero-line">Your <span class="word-window"><span class="word-measure">savings</span><span id="rotating-word" data-word="habits">habits</span></span></span></span></h1>
       <p class="hero-description">HabitCents brings your habits, spending, and savings<br class="desktop-break" /> together in one app.</p>
-      <div class="hero-actions"><a class="button" href="/signup">Get started <%- arrow %></a><button class="button button-android" type="button" disabled aria-describedby="android-status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="m7 5-2-3m12 3 2-3M4 12a8 8 0 0 1 16 0v6H4zM8 18v3m8-3v3M1 12v5m22-5v5"/><path d="M8 9h.01M16 9h.01" stroke-width="2.5"/></svg><span>Android <span class="coming-later">Coming later</span></span></button></div>
-      <div class="hero-note"><p id="android-status">Android app development hasn't started yet.</p></div>
+      <div class="hero-actions"><a class="button" href="/signup">Get started <%- arrow %></a><a class="button button-android" href="https://github.com/sabbirx06/habitcents/releases/tag/v1.0.0-beta.1" aria-describedby="android-status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="m7 5-2-3m12 3 2-3M4 12a8 8 0 0 1 16 0v6H4zM8 18v3m8-3v3M1 12v5m22-5v5"/><path d="M8 9h.01M16 9h.01" stroke-width="2.5"/></svg><span>Android <span class="coming-later">Beta</span></span></a></div>
+      <div class="hero-note"><p id="android-status">Android beta available · Android 11 or newer.</p></div>
     </section>
 
     <figure class="dashboard-preview wrap" aria-label="HabitCents dashboard preview with sample data"><div class="screenshot-frame"><img src="/media/previews/dashboard.webp" width="1280" height="840" alt="HabitCents dashboard showing daily habit progress, monthly budget, savings, and spending in one overview. Sample data." fetchpriority="high" /></div><figcaption>A look inside HabitCents. <span>Sample data.</span></figcaption></figure>
@@ -50,7 +50,7 @@
     <div class="footer-main wrap">
       <div class="footer-identity"><a href="/" aria-label="HabitCents home"><%- include('partials/brand', {variant:'wordmark'}) %></a><p>Your habits. Your money.<br />Your savings. All together.</p></div>
       <nav class="footer-column" aria-labelledby="footer-app-title"><h3 id="footer-app-title">The app</h3><a href="#features">Explore features</a><a href="/signup">Get started</a><a href="/login">Log in</a></nav>
-      <section class="footer-column" aria-labelledby="footer-resources-title"><h3 id="footer-resources-title">Resources</h3><span class="footer-planned" aria-disabled="true">Documentation<small>Coming soon</small></span><span class="footer-planned" aria-disabled="true">Release notes<small>Coming soon</small></span></section>
+      <section class="footer-column" aria-labelledby="footer-resources-title"><h3 id="footer-resources-title">Resources</h3><span class="footer-planned" aria-disabled="true">Documentation<small>Coming soon</small></span><a href="https://github.com/sabbirx06/habitcents/releases/tag/v1.0.0-beta.1">Release notes</a></section>
       <section class="footer-column" aria-labelledby="footer-connect-title"><h3 id="footer-connect-title">Connect</h3><span class="footer-planned" aria-disabled="true">Contact me<small>Details coming soon</small></span><span class="footer-planned" aria-disabled="true">Follow me<small>Links coming soon</small></span></section>
     </div>
     <div class="footer-bottom wrap"><span>© <%= new Date().getFullYear() %> HabitCents</span><p>Made with <span class="heart" role="img" aria-label="love">♥</span> by <span class="team-name">Team Alpha</span></p></div>

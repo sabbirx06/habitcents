@@ -26,7 +26,7 @@ The signing key and password file live under ignored `android/signing/`. Back up
 ## Publish the next beta
 
 1. Increase `versionCode` and update the beta suffix in `android/app/build.gradle`.
-2. Commit the intended source snapshot; update the release notes with actual changes and remaining limitations.
+2. Commit the intended source snapshot; update the release notes and website download links for the new version.
 3. From `android`, run `gradlew.bat :app:assembleBeta` (or `./gradlew :app:assembleBeta` on Linux/macOS).
 4. Verify the APK signing certificate with Android SDK `apksigner verify --verbose --print-certs` and compare it with the previous release's certificate.
 5. Publish a GitHub prerelease targeting that commit, tagged with the beta version. Attach the signed APK and its SHA-256 checksum. Keep it marked prerelease rather than latest stable.
