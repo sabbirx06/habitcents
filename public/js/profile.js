@@ -5,8 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
   account?.addEventListener('submit', async e => {
     e.preventDefault(); const button = account.querySelector('[type=submit]'); button.disabled = true; status(accountStatus, 'Saving…');
     try { const response = await fetch('/profile/account', {method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':token},body:JSON.stringify({name:account.elements.name.value})}); const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not save changes.');
-      account.elements.name.value = data.user.name; document.querySelector('.profile-identity h2').textContent = data.user.name;
-      const initials = data.user.name.trim().split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase(); document.querySelector('.profile-avatar').textContent = initials || '?';
+      account.elements.name.value = data.user.name;
+      const initials = data.user.name.trim().split(/\s+/).slice(0,2).map(x=>Array.from(x)[0]).join('').toUpperCase(); document.querySelector('.header-identity .initials-avatar').textContent = initials || '?';
       document.querySelectorAll('.header-identity h1,.header-identity .identity-name').forEach(n=>n.textContent=data.user.name);
       status(accountStatus, 'Changes saved.', true);
     } catch(error) { status(accountStatus, error.message); } finally { button.disabled = false; }

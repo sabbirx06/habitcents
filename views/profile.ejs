@@ -4,7 +4,6 @@
  <main class="profile-page">
   <%- include('partials/page-header', {left: include('partials/header-identity', {user, fallback: 'Your account'}), right: '<a class="page-header-action" href="/logout">Log out</a>'}) %>
   <div class="profile-content">
-   <header class="profile-identity"><span class="profile-avatar" aria-hidden="true"><%= (user.name || '?').trim().split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase() %></span><div><h2><%= user.name %></h2><p>Account and app preferences</p></div></header>
    <section class="settings-section" id="profile-reviews" aria-labelledby="reviews-title"><h2 id="reviews-title">Reviews</h2>
     <div class="settings-row review-controls"><div class="segmented" role="group" aria-label="Review period"><button type="button" data-review-kind="weekly" aria-pressed="true">Weekly</button><button type="button" data-review-kind="monthly" aria-pressed="false">Monthly</button></div><p id="review-range" class="section-intro"></p></div>
     <p id="review-status" class="settings-status" role="status" aria-live="polite"></p><button id="review-retry" class="text-action" type="button" hidden>Retry review</button><div id="review-content" aria-live="polite"></div>
