@@ -103,8 +103,10 @@
 @media (max-width:760px) {
 
 
- .live-clock { grid-row:2;font-size:76px; }.header-date { grid-row:3;justify-self:center;--date-size:48px; }
- .week-strip { gap:4px; }.week-day button { grid-template-columns:1fr;grid-template-rows:auto auto auto;text-align:center;min-height:66px;padding:.3rem .1rem;border-radius:10px; }
+ .time-header.page-header { grid-template-columns:minmax(0,1fr) auto;min-height:72px;gap:.75rem; }
+ .live-clock { display:none; }.header-date { grid-column:2;grid-row:1;justify-self:end;--date-size:48px; }
+ .week-strip { gap:4px; }.week-day button { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center;min-height:66px;padding:.3rem .1rem;border-radius:10px; }
+ .week-day:not(.today) .today-badge { display:none; }
  .week-day button>span:first-child { grid-column:1;grid-row:1;font-size:.75rem; }.week-day button>strong { grid-column:1;grid-row:2;font-size:1.3rem; }.week-day .today-badge { grid-column:1;grid-row:3;font-size:.66rem; }
  .dashboard-workspace { grid-template-columns:minmax(0,1fr); }
  .progress-panel,.habits-panel,.budget-panel,.activity-panel,.quick-entry-panel,.savings-panel { grid-column:1;grid-row:auto; }
@@ -141,10 +143,11 @@
 @keyframes date-backdrop-out { from { opacity:1; } to { opacity:0; } }
 
 @media (max-width:760px) {
- .week-calendar { grid-template-columns:44px 44px 1fr; }
- #week-today { justify-self:end; }
- #week-strip { grid-column:1/-1;grid-row:2; }
- #next-week { grid-column:2;grid-row:1; }
+ .week-calendar { position:relative;grid-template-columns:minmax(0,1fr);padding:0;box-sizing:border-box; }
+ .week-calendar .week-control { display:none; }
+ .week-day button { border:0;border-radius:12px;box-shadow:0 4px 8px -3px #0003; }
+ #week-today { display:none; }
+ #week-strip { grid-column:1;grid-row:1;gap:4px;touch-action:pan-y pinch-zoom; }
  .date-browser { padding:.8rem; }
  .date-browser-toolbar h2 { font-size:1.2rem; }
  .date-jump-controls { gap:.35rem; }

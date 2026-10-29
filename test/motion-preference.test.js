@@ -65,8 +65,12 @@ test('storage events synchronize explicit choices and removal returns to system'
 });
 
 test('preference bootstrap precedes styles and all motion checks use the controller', () => {
-  const head = fs.readFileSync('views/partials/head.ejs', 'utf8');
-  assert.ok(head.indexOf('/js/motion-preference.js') < head.indexOf('<link'));
+  for (const view of ['partials/head', 'login', 'signup']) {
+    const head = fs.readFileSync('views/' + view + '.ejs', 'utf8');
+    assert.ok(head.includes('/js/motion-preference.js'), view + ' loads the motion controller');
+    assert.ok(head.includes('/css/motion-preference.css'), view + ' loads shared motion styles');
+    assert.ok(head.indexOf('/js/motion-preference.js') < head.indexOf('<link'));
+  }
   for (const name of ['motion.js', 'dashboard.js', 'expenses.js', 'workspace.js']) {
     assert.doesNotMatch(fs.readFileSync('public/js/' + name, 'utf8'), /prefers-reduced-motion/);
   }

@@ -292,6 +292,58 @@ test('week controls browse without selecting a date or requesting history and To
  assert.equal(days()[0].dataset.date,'2025-12-29');assert.equal(el('#history-view').hidden,true);
 });
 
+test('mobile expense dialog reuses the form, preserves a rejected draft and closes after saving',async()=>{
+ const el=setup(fixture), dialog=el('#dashboard-expense-dialog'),entry=el('.quick-entry-panel');
+ const parent={insertBefore(node){assert.equal(node,entry);this.restored=true;}};
+ entry.parentElement=parent;
+ dialog.showModal=()=>{dialog.open=true;};
+ dialog.close=()=>{dialog.open=false;dialog.listeners.close();};
+ await (await modulePromise).initDashboard({now:new Date(2026,0,1)});
+ el('#open-dashboard-expense').listeners.click();assert.equal(dialog.open,true);assert.equal(dialog.children[0],entry);
+ el('#expense-name').value='Tea';el('#expense-amount').value='15';
+ el('#close-dashboard-expense').listeners.click();assert.equal(parent.restored,true);assert.equal(el('#expense-name').value,'Tea');
+ el('#open-dashboard-expense').listeners.click();
+ const normal=global.fetch;let accepted=false;
+ global.fetch=async(url,options)=>url==='/add-expense'?{ok:accepted,json:async()=>accepted?{success:true}:{error:'Please try again.'}}:normal(url,options);
+ await el('.expense-form').listeners.submit({preventDefault(){}});
+ assert.equal(dialog.open,true);assert.equal(el('#expense-name').value,'Tea');assert.match(el('#expense-status').textContent,/try again/);
+ accepted=true;await el('.expense-form').listeners.submit({preventDefault(){}});
+ assert.equal(dialog.open,false);assert.equal(el('.expense-form').wasReset,true);
+});
+
+test('mobile streak displays the server count and leaves an unconfigured streak unavailable',async()=>{
+ const previous=globalThis.matchMedia;
+ globalThis.matchMedia=()=>({matches:true});
+ try {
+  const streak={status:'available',count:4,currentDate:'2026-01-01',asOfDate:'2026-01-01'};
+  let el=setup({...fixture,'/universal-streak':streak});
+  await (await modulePromise).initDashboard({now:new Date(2026,0,1)});
+  assert.equal(el('#universal-streak').textContent,'4');
+  assert.match(el('#universal-streak').attributes['aria-label'],/4 day streak/);
+  el=setup({...fixture,'/universal-streak':{...streak,status:'setup-required',count:null}});
+  await (await modulePromise).initDashboard({now:new Date(2026,0,1)});
+  assert.equal(el('#universal-streak').textContent,'—');
+  assert.equal(el('#streak-status').textContent,'');
+  assert.equal(el('#universal-streak').dataset.state,'unavailable');
+ } finally { if(previous)globalThis.matchMedia=previous;else delete globalThis.matchMedia; }
+});
+
+test('mobile date strip swipes weeks without selecting dates or intercepting vertical scrolling',async()=>{
+ const el=setup(fixture), previous=globalThis.matchMedia;
+ globalThis.matchMedia=()=>({matches:true});
+ try {
+  await (await modulePromise).initDashboard({now:new Date(2026,0,1)});
+  const strip=el('#week-strip'), first=()=>strip.children[0].children[0].dataset.date;
+  const swipe=(x,y=0)=>{strip.listeners.touchstart({touches:[{clientX:100,clientY:100}]});strip.listeners.touchend({touches:[],changedTouches:[{clientX:100+x,clientY:100+y}]});};
+  swipe(-80);assert.equal(first(),'2026-01-05');
+  swipe(80);assert.equal(first(),'2025-12-29');
+  swipe(10);swipe(-80,120);assert.equal(first(),'2025-12-29');
+  strip.listeners.touchstart({touches:[{clientX:100,clientY:100}]});strip.listeners.touchcancel();strip.listeners.touchend({touches:[],changedTouches:[{clientX:0,clientY:100}]});assert.equal(first(),'2025-12-29');
+  globalThis.matchMedia=()=>({matches:false});swipe(-80);assert.equal(first(),'2025-12-29');
+  assert.notEqual(el('#dashboard-grid').hidden,true);
+ } finally { if(previous)globalThis.matchMedia=previous;else delete globalThis.matchMedia; }
+});
+
 function continuityFixture(habitId=1,end='2026-01-01',completedDates=[]){return {habit:{id:habitId,name:'Habit '+habitId,createdDate:null},startDate:'2025-07-07',endDate:end,currentDate:'2026-01-01',completedDates,streak:null};}
 const spendingFixture=(date,amount='12.35')=>({range:{startDate:date.slice(0,7)+'-01',endDate:date},total:amount,days:[{date,amount,count:1}]});
 

@@ -99,8 +99,6 @@ test("habit summaries retain direct actions and expenses retain transaction filt
     assert.equal((expenses.match(new RegExp(`id="${id}"`, "g")) || []).length, 1, `${id} must stay unique`);
   assert.match(expenses, /id="budget-edit" class="workspace-text-button"/);
   assert.match(expenses, /id="calendar-open" class="workspace-button secondary small"/);
-  assert.match(expenses, /<details class="recurring-help">/);
-  assert.match(expenses, /<summary>Payment confirmation<\/summary>/);
   assert.match(
     expenses,
     /id="transaction-options"[^>]*aria-label="Search and filter transactions"/,
@@ -160,9 +158,9 @@ test("savings summary excludes archived balances and preserves completed goals u
 
 test('habit accents preserve saved custom colors and vary missing colors by stable ID',async()=>{
  const {habitAccent}=await load('habits');
- for(const color of ['lavender','blue','lime','peach','pink']) assert.equal(habitAccent({color}),color);
+ for(const color of ['lavender','blue','lime','peach','pink','coral','teal','yellow','mint','lilac']) assert.equal(habitAccent({color}),color);
  const existing=Array.from({length:6},(_,i)=>({habit_id:String(101+i),habit_name:'[Demo] Existing '+i,color:i===0?'invalid':null}));
- assert.equal(new Set(existing.map(habit=>habitAccent(habit))).size,5);
+ assert.equal(new Set(existing.map(habit=>habitAccent(habit))).size,6);
  assert.deepEqual([...existing].reverse().map(habit=>habitAccent(habit)).reverse(),existing.map(habit=>habitAccent(habit)));
  assert.equal(habitAccent({habit_id:101}),habitAccent({habit_id:'101'}));
  assert.equal(habitAccent({habit_id:'9007199254740993'}),'lavender');

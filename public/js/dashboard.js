@@ -453,6 +453,18 @@ async function initializeDashboard({ now } = {}) {
   readLocalDay = () => isoDate(now ?? new Date());
   startHeader(now);
   bindDateBrowser();
+  const expenseDialog = $("#dashboard-expense-dialog"), expenseEntry = $(".quick-entry-panel");
+  const expenseParent = expenseEntry?.parentElement, expenseNext = expenseEntry?.nextSibling;
+  $("#open-dashboard-expense")?.addEventListener("click", () => {
+    if (view.mode !== "today") return;
+    expenseDialog.append(expenseEntry);
+    expenseDialog.showModal();
+  });
+  $("#close-dashboard-expense")?.addEventListener("click", () => expenseDialog.close());
+  expenseDialog?.addEventListener("close", () => {
+    expenseParent.insertBefore(expenseEntry, expenseNext ?? null);
+    if (globalThis.matchMedia?.("(max-width:760px)").matches) $("#open-dashboard-expense")?.focus?.();
+  });
   if (typeof window !== "undefined") {
     const syncSharedData = () => {
       if (view.browser) return;
@@ -570,6 +582,7 @@ async function initializeDashboard({ now } = {}) {
       $(".expense-form").reset();
       $("#expense-date").value = readLocalDay();
       status("#expense-status", "Expense added.", true);
+      if (expenseDialog?.open) expenseDialog.close();
       await refreshDashboard();
     } catch (error) {
       status(
@@ -1314,6 +1327,7 @@ function extendPicker() {
 function bindDateBrowser() {
   if (typeof window !== "undefined")
     window.addEventListener("resize", () => {
+      if (window.innerWidth > 760 && $("#dashboard-expense-dialog")?.open) $("#dashboard-expense-dialog").close();
       if (recentExpenseRows && view.mode !== "history") renderRecentExpenses(recentExpenseRows);
       if (!$("#spending-chart")?.hidden) updateSpendingScale();
     });
@@ -1321,6 +1335,21 @@ function bindDateBrowser() {
     const button = event.target.closest("button[data-date]");
     return button ? selectDate(button.dataset.date) : undefined;
   });
+  let weekTouch = null;
+  $("#week-strip")?.addEventListener("touchstart", (event) => {
+    weekTouch = globalThis.matchMedia?.("(max-width:760px)").matches && event.touches.length === 1 ? event.touches[0] : null;
+  }, { passive: true });
+  $("#week-strip")?.addEventListener("touchend", (event) => {
+    const start = weekTouch;
+    weekTouch = null;
+    if (!start || event.touches.length || !event.changedTouches.length) return;
+    const dx = event.changedTouches[0].clientX - start.clientX;
+    const dy = event.changedTouches[0].clientY - start.clientY;
+    if (Math.abs(dx) < 40 || Math.abs(dx) <= Math.abs(dy)) return;
+    view.week = shiftDate(view.week ?? readLocalDay(), dx < 0 ? 7 : -7);
+    renderWeek(readLocalDay());
+  }, { passive: true });
+  $("#week-strip")?.addEventListener("touchcancel", () => { weekTouch = null; }, { passive: true });
   $("#previous-week")?.addEventListener("click", () => {
     view.week = shiftDate(view.week ?? readLocalDay(), -7);
     renderWeek(readLocalDay());
@@ -2184,7 +2213,8 @@ async function loadUniversalStreak() {
     } else if (data.status === "setup-required" && data.count === null) {
       text('#universal-streak','—');$('#universal-streak').dataset.state='unavailable';
       if (!history) {
-        status("#streak-status", "Streak tracking needs setup.");
+        $("#universal-streak").setAttribute("aria-label", "Streak tracking needs setup");
+        status("#streak-status", globalThis.matchMedia?.("(max-width:760px)").matches ? "" : "Streak tracking needs setup.");
         return;
       }
       status(

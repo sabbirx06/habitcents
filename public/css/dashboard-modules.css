@@ -1,4 +1,10 @@
 /* Summary group and three lower regions share deliberate outer grid boundaries. */
+.dashboard-expense-trigger,#close-dashboard-expense { display:none; }
+.mobile-streak-label { display:none; }
+#dashboard-expense-dialog #close-dashboard-expense { display:grid; }
+#dashboard-expense-dialog .panel-symbol { display:none; }
+#dashboard-expense-dialog .quick-entry-panel { padding:0;border:0;background:transparent; }
+#dashboard-expense-dialog .amount-field input { padding-left:2.5rem; }
 .dashboard-workspace { --bento-gap:10px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.1fr) minmax(240px,1fr);grid-template-areas:"progress budget savings" "lower lower lower";gap:var(--bento-gap);align-items:stretch; }
 .dashboard-workspace .panel { order:0;min-width:0;min-height:0;padding:.5rem .85rem;border-radius:20px; }
 .dashboard-workspace .progress-panel { grid-area:progress; }
@@ -126,12 +132,26 @@
 }
 @media(max-width:760px) {
  .dashboard-workspace .panel { padding:.85rem; }
+ .budget-panel .spent-figure { display:none; }
+ .dashboard-workspace[data-mode=today] { grid-template-areas:"progress log" "progress streak" "budget budget" "habits habits" "expenses expenses" "spending spending" "savings savings";grid-template-rows:minmax(72px,auto) minmax(72px,auto); }
+ .dashboard-workspace[data-mode=today] .dashboard-lower,.dashboard-workspace[data-mode=today] .dashboard-habit-group { display:contents; }
+ .dashboard-workspace[data-mode=today] .habits-panel { grid-area:habits; }
+ .dashboard-workspace[data-mode=today] .universal-streak-panel { grid-area:streak;display:flex;flex-direction:column;justify-content:center;border-radius:12px;padding:.35rem .65rem; }
+ .dashboard-workspace[data-mode=today] .universal-streak-panel h2 { display:none; }
+ .dashboard-workspace[data-mode=today] .mobile-streak-label { display:inline; }
+ .dashboard-workspace[data-mode=today] #universal-streak { flex-shrink:0;font-size:clamp(44px,14vw,52px);line-height:.85;white-space:nowrap; }
+ .dashboard-workspace[data-mode=today] #universal-streak[data-state=unavailable] { font-size:1.1rem; }
+ .dashboard-workspace[data-mode=today] .streak-figure { flex-wrap:nowrap;gap:.25rem;margin:0; }
+ .dashboard-workspace[data-mode=today] .streak-figure>span:last-child { font-size:clamp(10px,3.2vw,12.8px);letter-spacing:.04em;white-space:nowrap; }
+ .dashboard-workspace[data-mode=today] #streak-status:empty { display:none; }
+ .dashboard-expense-trigger { display:flex;align-items:center;justify-content:center;grid-area:log;min-width:0;min-height:44px;padding:.65rem 1rem;border:0;border-radius:12px;background:#ff6000;color:#222320;font:500 1.05rem/1.35 var(--font-text);cursor:pointer; }
+ .dashboard-workspace .quick-entry-panel { display:none; }
  .dashboard-lower { grid-template-columns:minmax(0,1fr);grid-template-areas:"habits" "entry" "expenses"; }
  .dashboard-habit-group { grid-template-rows:auto auto; }
  .dashboard-entry-group { display:contents; }
  .dashboard-workspace .quick-entry-panel { grid-area:entry; }
  .dashboard-workspace .spending-panel { grid-area:spending; }
- .dashboard-lower { grid-template-areas:"habits" "entry" "expenses" "spending"; }
+ .dashboard-lower { grid-template-areas:"habits" "expenses" "spending"; }
  .dashboard-workspace[data-mode=history] .dashboard-lower { grid-template-areas:"habits" "history" "spending"; }
  .dashboard-workspace .history-view { grid-template-columns:minmax(0,1fr); }
  .historical-expenses { grid-column:1; }
@@ -239,7 +259,7 @@
 @media(max-width:760px) {
  .dashboard-workspace[data-mode=history] {
   grid-template-columns:minmax(0,1fr);
-  grid-template-areas:"progress" "streak" "habits" "recorded" "savings" "expenses" "completion" "spending";
+  grid-template-areas:"progress" "streak" "habits" "recorded" "expenses" "completion" "spending" "savings";
   grid-template-rows:none;
   grid-auto-rows:auto;
  }

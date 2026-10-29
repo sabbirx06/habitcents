@@ -192,6 +192,3 @@ button, input { font: inherit; }
   .auth-form { grid-template-columns: 1fr; }
   .field-name { grid-column: auto; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .auth-submit { transition: none; }
-}
