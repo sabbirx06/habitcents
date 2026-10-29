@@ -136,7 +136,9 @@ function renderWeek(currentDate) {
     }),
   );
 }
+const pendingReads = new Map();
 async function request(url, options = {}) {
+  if (options.method && options.method !== 'GET') pendingReads.clear();
   const response = await fetch(url, {
     ...options,
     signal: AbortSignal.timeout(15000),
@@ -145,10 +147,19 @@ async function request(url, options = {}) {
     throw new Error("Your session may have expired. Reload and sign in again.");
   return response;
 }
-async function read(url) {
-  const response = await request(url);
-  if (!response.ok) throw new Error(`${url} failed (HTTP ${response.status}).`);
-  return response.json();
+function read(url) {
+  let pending = pendingReads.get(url);
+  if (!pending) {
+    pending = (async () => {
+      const response = await request(url);
+      if (!response.ok) throw new Error(`${url} failed (HTTP ${response.status}).`);
+      return response.json();
+    })().finally(() => {
+      if (pendingReads.get(url) === pending) pendingReads.delete(url);
+    });
+    pendingReads.set(url, pending);
+  }
+  return pending;
 }
 function setEmpty(list, message) {
   const item = document.createElement("li");
@@ -400,6 +411,7 @@ function renderRecentExpenses(expenses) {
   );
 }
 async function refreshDashboard() {
+  pendingReads.clear();
   const token = view.generation;
   const results = await Promise.allSettled([
     loadOverview(),

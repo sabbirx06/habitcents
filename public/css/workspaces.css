@@ -1606,6 +1606,11 @@
 }
 
 /* Expense summary and compact recurring list */
+@media(min-width:651px) {
+ .expense-workspace > :is(.expense-budget,.expense-spent,.expense-recurring) { order:0; }
+ .expense-workspace > :is(.expense-trend,.expense-breakdown) { order:1; }
+ .expense-workspace > .expense-transactions { order:2; }
+}
 .expense-workspace > .expense-budget,.expense-workspace > .expense-spent { grid-column:span 2; }
 .expense-workspace > .expense-recurring { grid-column:span 2;background:var(--habit-lavender);min-width:0; }
 .expense-recurring { display:flex;flex-direction:column; }

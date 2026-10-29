@@ -20,8 +20,9 @@ function buildPoolOptions(env = process.env) {
     options: '-c timezone=Asia/Dhaka',
     ssl: { rejectUnauthorized: true, ...(env.DATABASE_CA_CERT_PATH ? { ca: fs.readFileSync(env.DATABASE_CA_CERT_PATH, 'utf8') } : {}) },
     max: 5,
+    min: 1,
     connectionTimeoutMillis: 10000,
-    idleTimeoutMillis: 30000,
+    idleTimeoutMillis: 300000,
   };
 }
 

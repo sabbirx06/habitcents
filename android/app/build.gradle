@@ -2,12 +2,16 @@ plugins { id 'com.android.application' }
 
 def appUrl = providers.gradleProperty('appUrl').getOrElse('http://127.0.0.1:3000')
 def uri = new URI(appUrl)
+def signingFile = rootProject.file('signing/keystore.properties')
+def signingProperties = new Properties()
+if (signingFile.exists()) signingFile.withInputStream { signingProperties.load(it) }
 if (!(uri.scheme in ['http', 'https']) || !uri.host || uri.userInfo || uri.query || uri.fragment || !(uri.path in ['', '/'])) {
     throw new GradleException('appUrl must be an HTTP(S) origin without credentials, path, query or fragment.')
 }
 gradle.taskGraph.whenReady { graph ->
-    if (graph.allTasks.any { it.name.toLowerCase().contains('release') } && uri.scheme != 'https') {
-        throw new GradleException('Release builds require -PappUrl=https://YOUR_HOST')
+    if (graph.allTasks.any { it.name.toLowerCase().contains('release') || it.name.toLowerCase().contains('beta') }) {
+        if (uri.scheme != 'https') throw new GradleException('Release and beta builds require an HTTPS appUrl.')
+        if (!signingFile.exists()) throw new GradleException('Create signing/keystore.properties before building a signed release. See docs/beta-release.md.')
     }
 }
 
@@ -18,11 +22,30 @@ android {
         applicationId 'com.habitcents.app'
         minSdk 30
         targetSdk 36
-        versionCode 1
-        versionName '1.0'
+        versionCode 2
+        versionName '1.0.0'
+        manifestPlaceholders = [appLabel: 'HabitCents']
         buildConfigField 'String', 'APP_URL', '"' + appUrl.replaceAll('/$', '') + '"'
     }
     buildFeatures { buildConfig true }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
-    buildTypes { release { minifyEnabled false } }
+    signingConfigs {
+        release {
+            if (signingFile.exists()) {
+                storeFile rootProject.file(signingProperties.storeFile)
+                storePassword signingProperties.storePassword
+                keyAlias signingProperties.keyAlias
+                keyPassword signingProperties.keyPassword
+            }
+        }
+    }
+    buildTypes {
+        release { minifyEnabled false; signingConfig signingConfigs.release }
+        beta {
+            initWith release
+            applicationIdSuffix '.beta'
+            versionNameSuffix '-beta.1'
+            manifestPlaceholders = [appLabel: 'HabitCents Beta']
+        }
+    }
 }

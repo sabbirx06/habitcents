@@ -1,0 +1,24 @@
+[Unit]
+Description=HabitCents web application
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=habitcents
+Group=habitcents
+WorkingDirectory=/opt/habitcents
+EnvironmentFile=/etc/habitcents.env
+ExecStart=/usr/bin/node --max-old-space-size=128 /opt/habitcents/server.js
+Restart=on-failure
+RestartSec=5
+MemoryHigh=192M
+MemoryMax=256M
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

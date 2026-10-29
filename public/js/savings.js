@@ -223,8 +223,5 @@ export function initSavings() {
   bindWorkspaceRefresh(loadSavings, localDay);
   $("#goal-new").addEventListener("click", () => editGoal());
   $("#savings-retry").addEventListener("click", loadSavings);
-  window.addEventListener("focus", () => {
-    if (!document.querySelector(".workspace-dialog")) loadSavings();
-  });
   loadSavings();
 }

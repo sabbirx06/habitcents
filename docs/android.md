@@ -10,16 +10,18 @@ Android 11 or newer is supported. The local APK is for testing, not store distri
 2. Run `node scripts/android-local.cjs` from the repository root. This uses a separate persistent local PostgreSQL-compatible database in `.cache/android-local-db`, applies migrations only there, and never loads `.env`. Create a test account in the app. Do not use real credentials in this HTTP development environment.
 3. Connect wireless debugging and run `adb reverse tcp:3000 tcp:3000`. Repeat after reconnecting the phone.
 4. Set `JAVA_HOME` to your JDK (Android Studio's `jbr` works) and `ANDROID_HOME` to your Android SDK.
-5. From `android`, run `./gradlew :app:assembleDebug :app:lintDebug` (`gradlew.bat` on Windows).
+5. From `android`, run `./gradlew :app:assembleDebug :app:lintDebug -PappUrl=http://127.0.0.1:3000` (`gradlew.bat` on Windows). Without this override the app connects to the hosted website.
 6. Run `adb install -r android/app/build/outputs/apk/debug/app-debug.apk` from the repository root, then open HabitCents.
 
 The server must stay running and wireless debugging connected. If disconnected, the app offers Try again. Login cookies and local test accounts persist across restarts. Exports save through Android's Download Manager into Downloads. External links open in the browser. Back follows page history, then closes the activity.
 
-## Hosted builds later
+## Hosted builds
+
+The default build now connects to `https://habitcents.duckdns.org`, configured in `android/gradle.properties`. It does not need the local server or ADB reverse connection. See [VPS deployment](vps.md).
 
 Build with `-PappUrl=https://YOUR_HOST` when hosting is available. The URL must be an origin without a subpath, credentials, query or fragment. Release tasks reject HTTP; only debug builds permit it. TLS errors are never bypassed. Database credentials and `.env` are never packaged.
 
-Before distribution, configure the production server, verify HTTPS login and all writes on staging, supply final adaptive launcher artwork, and sign the release with your own keystore. `:app:assembleRelease -PappUrl=https://YOUR_HOST` creates an unsigned release APK; configure signing or use Android Studio's signed bundle flow for distribution. Do not distribute the local debug APK as a hosted release.
+The [beta release channel](beta-release.md) distributes a signed APK with a separate Beta app identity. `:app:assembleBeta` builds the beta; `:app:assembleRelease` builds the stable variant. Both require the local signing configuration and HTTPS. Do not distribute the local debug APK as a hosted release. Final adaptive launcher artwork and store publication remain separate work.
 
 ## Verified 2026-10-29
 

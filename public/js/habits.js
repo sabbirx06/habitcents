@@ -712,8 +712,5 @@ export function initHabits() {
       if (!document.querySelector(".workspace-dialog")) renderHabits();
     }, 200);
   });
-  window.addEventListener("focus", () => {
-    if (!document.querySelector(".workspace-dialog")) loadHabits();
-  });
   loadHabits();
 }

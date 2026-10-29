@@ -425,10 +425,14 @@ export function notifyChange() {
   } catch {}
 }
 export function bindWorkspaceRefresh(refresh, day) {
-  let last = day();
+  let last = day(), timer;
   const safe = () => {
-    if (!document.querySelector(".workspace-dialog")) refresh();
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (!document.querySelector(".workspace-dialog")) refresh();
+    }, 50);
   };
+  window.addEventListener("focus", safe);
   window.addEventListener("storage", (e) => {
     if (e.key === "habitcents-data-updated") safe();
   });

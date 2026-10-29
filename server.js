@@ -46,7 +46,13 @@ function createApp({ db, sessionSecret, sessionStore }) {
     }
     next();
   });
-  app.use(express.static(path.join(__dirname, "public"))); // Serve static files (CSS, JS, images)
+  app.use(express.static(path.join(__dirname, "public"), {
+    setHeaders(res, file) {
+      // Cache fonts longer; code still revalidates so UI updates appear immediately.
+      if (/\.(?:otf|ttf|woff2?)$/i.test(file)) res.setHeader('Cache-Control', 'public, max-age=31536000');
+      else if (/\.(?:png|jpe?g|webp|svg|ico)$/i.test(file)) res.setHeader('Cache-Control', 'public, max-age=3600');
+    },
+  }));
   app.set("view engine", "ejs"); // Set EJS as the template engine for rendering HTML
 
   // Session configuration - manages user login state across requests
@@ -384,9 +390,6 @@ function createApp({ db, sessionSecret, sessionStore }) {
       (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date::text AS "currentDate",
       EXISTS(SELECT 1 FROM budgets WHERE user_id=$1 AND month=EXTRACT(MONTH FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date)
         AND year=EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date)) AS "hasBudget",
-      (SELECT COUNT(*)::integer FROM habits h WHERE user_id=$1 AND to_jsonb(h)->>'archived_on' IS NULL AND (to_jsonb(h)->'schedule_days' IS NULL OR to_jsonb(h)->'schedule_days' @> to_jsonb(EXTRACT(ISODOW FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date)::integer))) AS "totalHabits",
-      (SELECT COUNT(*)::integer FROM habit_logs hl JOIN habits h ON hl.habit_id=h.habit_id
-        WHERE h.user_id=$1 AND hl.date=(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date AND hl.completed_status IS TRUE AND to_jsonb(h)->>'archived_on' IS NULL AND (to_jsonb(h)->'schedule_days' IS NULL OR to_jsonb(h)->'schedule_days' @> to_jsonb(EXTRACT(ISODOW FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date)::integer))) AS completed,
       COALESCE((SELECT total_budget FROM budgets WHERE user_id=$1
         AND month=EXTRACT(MONTH FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date) AND year=EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date)),0)::double precision AS "totalBudget",
       (SELECT COALESCE(SUM(amount),0)::double precision FROM expenses WHERE user_id=$1
@@ -520,6 +523,6 @@ if (require.main === module) {
   const db = createPool();
   const sessionStore=process.env.NODE_ENV==='production'?new (require('./lib/session-store').PostgresSessionStore)(db):undefined;
   const app = createApp({ db, sessionSecret,sessionStore });
-  app.listen(process.env.PORT || 3000, () => console.log('HabitCents server started'));
+  app.listen(process.env.PORT || 3000, process.env.IP || '::', () => console.log('HabitCents server started'));
 }
 module.exports = { createApp };

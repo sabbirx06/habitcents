@@ -34,9 +34,9 @@ let data = null,
   generation = 0,
   recurringGeneration = 0,
   initialized = false,
-  chartView = "bar";
+  chartView = globalThis.matchMedia?.("(max-width: 650px)").matches ? "bar" : "circle";
 try {
-  chartView = globalThis.matchMedia?.("(max-width: 650px)").matches ? "bar" : localStorage.getItem("habitcents-category-chart") === "circle" ? "circle" : "bar";
+  chartView = globalThis.matchMedia?.("(max-width: 650px)").matches ? "bar" : localStorage.getItem("habitcents-category-chart") === "bar" ? "bar" : "circle";
 } catch {}
 export function aggregateExpenses(expenses) {
   const byDate = new Map(),
@@ -691,12 +691,6 @@ export function initExpenses() {
       bars.forEach((b) => (b.tabIndex = -1));
       bars[next].tabIndex = 0;
       bars[next].focus();
-    }
-  });
-  window.addEventListener("focus", () => {
-    if (!document.querySelector(".workspace-dialog")) {
-      loadExpenses();
-      loadRecurring();
     }
   });
   loadExpenses();

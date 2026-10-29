@@ -66,7 +66,7 @@ public class MainActivity extends Activity {
         heading.setText("Unable to connect"); heading.setTextSize(24); heading.setTextColor(Color.rgb(34, 35, 32));
         error.addView(heading);
         TextView detail = new TextView(this);
-        detail.setText(BuildConfig.DEBUG ? "Keep the HabitCents server running on your computer and reconnect wireless debugging." : "Check your connection, then try again.");
+        detail.setText(BuildConfig.APP_URL.startsWith("http://127.0.0.1:") ? "Keep the HabitCents server running on your computer and reconnect wireless debugging." : "Check your connection, then try again.");
         detail.setTextSize(16); detail.setGravity(Gravity.CENTER); detail.setPadding(0, dp(16), 0, dp(24));
         error.addView(detail);
         Button retry = new Button(this); retry.setText("Try again"); retry.setMinHeight(dp(48));
