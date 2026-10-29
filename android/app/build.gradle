@@ -1,0 +1,28 @@
+plugins { id 'com.android.application' }
+
+def appUrl = providers.gradleProperty('appUrl').getOrElse('http://127.0.0.1:3000')
+def uri = new URI(appUrl)
+if (!(uri.scheme in ['http', 'https']) || !uri.host || uri.userInfo || uri.query || uri.fragment || !(uri.path in ['', '/'])) {
+    throw new GradleException('appUrl must be an HTTP(S) origin without credentials, path, query or fragment.')
+}
+gradle.taskGraph.whenReady { graph ->
+    if (graph.allTasks.any { it.name.toLowerCase().contains('release') } && uri.scheme != 'https') {
+        throw new GradleException('Release builds require -PappUrl=https://YOUR_HOST')
+    }
+}
+
+android {
+    namespace 'com.habitcents.app'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'com.habitcents.app'
+        minSdk 30
+        targetSdk 36
+        versionCode 1
+        versionName '1.0'
+        buildConfigField 'String', 'APP_URL', '"' + appUrl.replaceAll('/$', '') + '"'
+    }
+    buildFeatures { buildConfig true }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    buildTypes { release { minifyEnabled false } }
+}

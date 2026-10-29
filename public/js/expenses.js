@@ -311,8 +311,7 @@ function renderTransactions() {
             : b.date.localeCompare(a.date),
     );
   $("#transaction-count").textContent = items.length + " entries";
-  $("#expense-list").replaceChildren(
-    ...items.map((e) => {
+  const rows = items.map((e) => {
       const c = categories[e.category] || categories.uncategorized,
         li = node("li", { class: "transaction", "data-category": e.category, 'data-expense': e.expense_id });
       li.style.setProperty("--category-color", c.color);
@@ -336,8 +335,22 @@ function renderTransactions() {
         "Edit " + e.description + ", " + money(e.amount) + ", " + e.date,
       );
       return li;
-    }),
-  );
+    });
+  const list = $('#expense-list');
+  if (list.closest('.transactions-dialog')) {
+    const days = new Map();
+    items.forEach((expense, index) => {
+      if (!days.has(expense.date)) days.set(expense.date, []);
+      days.get(expense.date).push(rows[index]);
+    });
+    const dates = [...days.keys()].sort((a, b) => sort === 'oldest' ? a.localeCompare(b) : b.localeCompare(a));
+    list.replaceChildren(...dates.map(day => node('li', {class:'transaction-day'},
+      node('h3', {}, node('time', {datetime:day}, displayDate(day))),
+      node('ul', {class:'transactions'}, ...days.get(day)),
+    )));
+  } else {
+    list.replaceChildren(...rows);
+  }
   if (!items.length)
     $("#expense-list").append(
       node("li", { class: "workspace-empty" }, "No transactions match these filters."),
@@ -582,6 +595,20 @@ async function loadRecurring() {
 export function initExpenses() {
   if (initialized) return;
   initialized = true;
+  $('#transactions-all').addEventListener('click', () => {
+    const trigger = $('#transactions-all'), list = $('#expense-list');
+    const content = node('div', {}, node('p', {class:'workspace-muted'}, displayDate(month + '-01', {month:'long',year:'numeric'})));
+    content.append(list);
+    const dialog = modal('All transactions', content, {
+      onClose: () => {
+        trigger.before(list);
+        renderTransactions();
+      },
+    });
+    dialog.classList.add('transactions-dialog');
+    renderTransactions();
+    dialog.querySelector('.workspace-dialog-close').focus();
+  });
   bindPanel("#calendar-open", "#calendar-panel", "Spending calendar");
   bindPanel("#transaction-options", "#transaction-controls", "Search and filter transactions");
   bindPanel("#category-options", "#category-controls", "Category chart style");

@@ -39,12 +39,6 @@ h1{font-family:var(--font-text);font-weight:700;font-size:clamp(48px,6.4vw,88px)
 .coming-later{font-size:12px;white-space:nowrap;border-left:1px solid #d1d1c5;padding-left:11px}
 .hero-note{display:flex;justify-content:center;align-items:center;gap:8px;min-height:28px;margin-top:13px;color:var(--muted)}
 .hero-note p{font-size:11px;margin:0}
-.rotation-toggle{display:grid;place-items:center;width:28px;height:28px;padding:6px;border:0;border-radius:50%;background:transparent;color:var(--muted);cursor:pointer}
-.rotation-toggle:hover{background:var(--soft)}
-.rotation-toggle svg{width:12px;height:12px}
-.rotation-toggle .play-icon{display:none}
-.rotation-toggle[data-paused=true] .pause-icon{display:none}
-.rotation-toggle[data-paused=true] .play-icon{display:block}
 .dashboard-preview{margin-top:65px;margin-bottom:0}
 .screenshot-frame{padding:9px;background:#e8e5de;border:1px solid #dad8ce;border-radius:15px;overflow:hidden}
 .screenshot-frame img{display:block;width:100%;height:auto;border-radius:8px;background:#dedbd4}

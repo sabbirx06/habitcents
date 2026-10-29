@@ -38,6 +38,8 @@
  .page-header-center:empty { display:none; }.page-header-center,.page-header-right { justify-self:start; }
  .page-header-context { text-align:left; }.page-header .month-picker { justify-content:flex-start; }
  .header-identity { justify-self:start;width:100%; }.page-header h1 { font-size:1.35rem; }
+ .profile-page > .page-header { grid-template-columns:minmax(0,1fr) auto; }
+ .profile-page > .page-header > .page-header-right { justify-self:end;white-space:nowrap; }
  .workspace-page[data-page]:is([data-page=habits],[data-page=expenses],[data-page=savings]) { padding-bottom:76px; }
  .workspace-page .page-header:has(:is(#habit-new,#expense-new,#goal-new)) { min-height:64px;gap:0;padding:.75rem 1rem; }
  .page-header-right:has(> :is(#habit-new,#expense-new,#goal-new)) { display:contents; }

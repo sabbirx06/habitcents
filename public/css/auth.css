@@ -178,8 +178,12 @@ button, input { font: inherit; }
   .auth-art { height: 29svh; min-height: 185px; border-right: 0; border-bottom: 1px solid var(--auth-line); }
   .auth-brand { top: 22px; left: 24px; font-size: 19px; }
   .auth-symbol { width: 85px; left: 70%; }
+  :is(.auth-login,.auth-signup) .auth-brand { left:50%;transform:translateX(-50%); }
+  :is(.auth-login,.auth-signup) .auth-symbol { left:50%; }
   .art-guides::before { background: linear-gradient(90deg, transparent calc(70% - .5px), var(--auth-line) 70%, transparent calc(70% + .5px)), linear-gradient(transparent calc(50% - .5px), var(--auth-line) 50%, transparent calc(50% + .5px)); }
   .art-guides::after { left: 70%; width: 200px; }
+  :is(.auth-login,.auth-signup) .art-guides::before { background:linear-gradient(90deg,transparent calc(50% - .5px),var(--auth-line) 50%,transparent calc(50% + .5px)),linear-gradient(transparent calc(50% - .5px),var(--auth-line) 50%,transparent calc(50% + .5px)); }
+  :is(.auth-login,.auth-signup) .art-guides::after { left:50%; }
   .auth-copyright { left: 24px; bottom: 16px; font-size: .5rem; }
   .auth-content { min-height: 71svh; }
   .auth-alternate { top: 24px; right: 24px; }

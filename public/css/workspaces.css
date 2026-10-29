@@ -640,6 +640,10 @@
   padding: 0;
   margin: 0;
 }
+#transactions-all { display:none;align-items:center;justify-content:center;width:fit-content;min-height:44px;margin:.5rem auto 0;padding:.3rem .65rem;font-size:.78rem;border-radius:6px; }
+.transactions-dialog { width:min(720px,calc(100% - 2rem)); }
+.transaction-day + .transaction-day { margin-top:1.25rem; }
+.transaction-day h3 { margin:.75rem 0 .4rem;font-size:.85rem;font-weight:600; }
 .transaction {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1369,9 +1373,8 @@
 }
 @media (max-width: 650px) {
   .workspace-header h1 { font-size: 1.65rem; }
-  .expense-transactions { display:flex;flex-direction:column;height:500px;min-height:0; }
-  .expense-transactions > .workspace-topline { flex:0 0 auto; }
-  .expense-transactions > .transactions { flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable; }
+  .workspace-page #expense-list > :nth-child(n+6) { display:none; }
+  .workspace-page #transactions-all { display:flex; }
   .category-layout { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
   .category-layout .category-donut { width: min(100%, 112px); }
   .category-legend button { grid-template-columns: 10px minmax(0, 1fr) auto auto; gap: 0.35rem; min-height: 36px; padding: 0.25rem 0; font-size: 0.8rem; }

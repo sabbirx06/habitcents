@@ -22,12 +22,12 @@
   });
 
   const word = document.getElementById('rotating-word');
-  const control = document.getElementById('rotation-toggle');
-  if (!word || !control || !word.animate) return;
+  if (!word || !word.animate) return;
   const words = ['habits', 'money', 'savings'];
-  let index = 0, timer, animation, paused = false, inView = true, sequence = 0;
-  const reduced = () => globalThis.HabitMotionPreference?.reduced() ?? true;
-  const allowed = () => !reduced() && !paused && inView && !document.hidden;
+  let index = 0, timer, animation, inView = true, sequence = 0;
+  // The landing headline autoplays unless the visitor explicitly disabled app animations.
+  const reduced = () => globalThis.HabitMotionPreference?.get() === 'off';
+  const allowed = () => !reduced() && inView && !document.hidden;
   function stop() {
     sequence++;
     clearTimeout(timer);
@@ -57,18 +57,9 @@
   }
   function sync() {
     stop();
-    control.hidden = reduced();
     if (reduced()) { index = 0; word.textContent = words[index]; word.dataset.word = words[index]; }
     schedule();
   }
-  control.addEventListener('click', () => {
-    paused = !paused;
-    control.dataset.paused = String(paused);
-    const label = (paused ? 'Resume' : 'Pause') + ' headline animation';
-    control.setAttribute('aria-label', label);
-    control.title = label;
-    sync();
-  });
   globalThis.addEventListener('habitmotionchange', sync);
   document.addEventListener('visibilitychange', sync);
   globalThis.addEventListener('pagehide', stop);
